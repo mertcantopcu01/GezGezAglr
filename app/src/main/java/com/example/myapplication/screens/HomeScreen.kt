@@ -5,14 +5,20 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.R
 import com.example.myapplication.firebase.AuthService
 
 @Composable
-fun HomeScreen(onLogout: () -> Unit) {
+fun HomeScreen(
+               onLogout: () -> Unit,
+               onNavigateToProfile: () -> Unit
+
+) {
     val user = AuthService.getCurrentUser()
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -34,6 +40,12 @@ fun HomeScreen(onLogout: () -> Unit) {
             onLogout()
         }) {
             Text(stringResource(R.string.login_out))
+        }
+
+        Button(
+            onClick = { onNavigateToProfile() }
+        ) {
+            Text(context.getString(R.string.go_profile))
         }
     }
 }

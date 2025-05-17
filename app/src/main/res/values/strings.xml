@@ -18,5 +18,19 @@
     <string name="passwords_dont_match">Şifreler eşleşmiyor</string>
     <string name="already_have_account_register">Zaten hesabın var mı? Giriş Yap</string>
     <string name="unknown">Bilinmiyor</string>
+    <string name="post_fail">Gönderi başarısız oldu</string>
+    <string name="there_is_no_account">Oturum Bulunamadı</string>
+    <string name="loading">Yükleniyor...</string>
+    <string name="send">Gönder</string>
+    <string name="choose_photo">Fotoğraf Seç</string>
+    <string name="what_are_you_thinking">Ne düşünüyorsun?</string>
+    <string name="location">Lokasyon (isteğe bağlı)</string>
+    <string name="choosen_photos">Seçilen Fotoğraf</string>
+    <string name="go_profile">Profile Git</string>
+    <string name="profil_photo">Profil Fotoğrafı</string>
+    <string name="there_is_no_tweet">Henüz hiç paylaşımın yok.</string>
+    <string name="user_id">Kullanıcı Adı</string>
+    <string name="bio">Hakkında</string>
+    <string name="share">Paylaş</string>
 
 </resources>

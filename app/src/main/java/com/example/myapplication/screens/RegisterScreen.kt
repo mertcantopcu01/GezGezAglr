@@ -1,17 +1,27 @@
 package com.example.myapplication.screens
 
+import android.net.Uri
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts.GetContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.rememberAsyncImagePainter
 import com.example.myapplication.R
 import com.example.myapplication.firebase.AuthService
+import com.example.myapplication.firebase.FirestoreService
+import com.example.myapplication.firebase.FirebaseStorageService
+import androidx.compose.ui.res.stringResource
+
 
 @Composable
 fun RegisterScreen(
@@ -21,7 +31,18 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
+    var bio by remember { mutableStateOf("") }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(GetContent()) { uri: Uri? ->
+        uri?.let { selectedImageUri = it }
+        Log.d("RegisterScreen", "Seçilen Görsel URI: $uri")
+    }
 
     Column(
         modifier = Modifier
@@ -30,21 +51,35 @@ fun RegisterScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(stringResource(R.string.register), fontSize = 28.sp)
+        Text(text = stringResource(R.string.register), fontSize = 28.sp)
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text(text = stringResource(R.string.email)) },
+            label = { Text(stringResource(R.string.email)) },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedTextField(
+            value = username,
+            onValueChange = { username = it },
+            label = { Text(context.getString(R.string.user_id)) },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedTextField(
+            value = bio,
+            onValueChange = { bio = it },
+            label = { Text(context.getString(R.string.bio)) },
             modifier = Modifier.fillMaxWidth()
         )
 
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text( stringResource(R.string.password)) },
+            label = { Text(stringResource(R.string.password)) },
             modifier = Modifier.fillMaxWidth(),
             visualTransformation = PasswordVisualTransformation()
         )
@@ -57,28 +92,62 @@ fun RegisterScreen(
             visualTransformation = PasswordVisualTransformation()
         )
 
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(onClick = { imagePickerLauncher.launch("image/*") }) {
+            Text(context.getString(R.string.choose_photo))
+        }
+
+        selectedImageUri?.let {
+            Spacer(modifier = Modifier.height(8.dp))
+            Image(
+                painter = rememberAsyncImagePainter(it),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(100.dp)
+                    .padding(8.dp)
+            )
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = {
-                if (password == confirmPassword) {
-                    AuthService.registerUser(email, password) { success, error ->
-                        if (success) {
-                            onRegisterSuccess()
-                        } else {
-                            errorMessage = error
+                if (password != confirmPassword) {
+                    errorMessage = context.getString((R.string.passwords_dont_match))
+                    return@Button
+                }
+
+                isLoading = true
+                AuthService.registerUser(email, password) { success, error ->
+                    if (success) {
+                        val uid = AuthService.getCurrentUser()?.uid
+                        if (uid != null) {
+                            if (selectedImageUri != null) {
+                                FirebaseStorageService.uploadImage(context, selectedImageUri!!) { imageUrl ->
+                                    FirestoreService.saveUserProfile(uid, username, bio, imageUrl , password)
+                                    isLoading = false
+                                    onRegisterSuccess()
+                                }
+                            } else {
+                                FirestoreService.saveUserProfile(uid, username, bio, null , password)
+                                isLoading = false
+                                onRegisterSuccess()
+                            }
                         }
+                    } else {
+                        isLoading = false
+                        errorMessage = error
                     }
-                } else {
-                    errorMessage = R.string.passwords_dont_match.toString()
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading
         ) {
-            Text(stringResource(R.string.register))
+            Text(if (isLoading) context.getString(R.string.loading) else context.getString(R.string.register))
         }
 
-        TextButton(onClick = { onNavigateToLogin() }) {
+        TextButton(onClick = onNavigateToLogin) {
             Text(stringResource(R.string.already_have_account_register))
         }
 
