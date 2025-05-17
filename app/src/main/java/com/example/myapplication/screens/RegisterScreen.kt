@@ -6,9 +6,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.myapplication.R
 import com.example.myapplication.firebase.AuthService
 
 @Composable
@@ -28,21 +30,21 @@ fun RegisterScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Kayıt Ol", fontSize = 28.sp)
+        Text(stringResource(R.string.register), fontSize = 28.sp)
 
         Spacer(modifier = Modifier.height(32.dp))
 
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Email") },
+            label = { Text(text = stringResource(R.string.email)) },
             modifier = Modifier.fillMaxWidth()
         )
 
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Şifre") },
+            label = { Text( stringResource(R.string.password)) },
             modifier = Modifier.fillMaxWidth(),
             visualTransformation = PasswordVisualTransformation()
         )
@@ -50,7 +52,7 @@ fun RegisterScreen(
         OutlinedTextField(
             value = confirmPassword,
             onValueChange = { confirmPassword = it },
-            label = { Text("Şifre Tekrar") },
+            label = { Text(stringResource(R.string.password_again)) },
             modifier = Modifier.fillMaxWidth(),
             visualTransformation = PasswordVisualTransformation()
         )
@@ -68,16 +70,16 @@ fun RegisterScreen(
                         }
                     }
                 } else {
-                    errorMessage = "Şifreler eşleşmiyor"
+                    errorMessage = R.string.passwords_dont_match.toString()
                 }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Kayıt Ol")
+            Text(stringResource(R.string.register))
         }
 
         TextButton(onClick = { onNavigateToLogin() }) {
-            Text("Zaten hesabın var mı? Giriş Yap")
+            Text(stringResource(R.string.already_have_account_register))
         }
 
         errorMessage?.let {
