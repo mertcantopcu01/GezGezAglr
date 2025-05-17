@@ -7,11 +7,14 @@ import androidx.navigation.compose.composable
 import com.example.myapplication.screens.HomeScreen
 import com.example.myapplication.screens.LoginScreen
 import com.example.myapplication.screens.RegisterScreen
+import com.example.myapplication.screens.ProfileScreen
+
 
 object Routes {
     const val LOGIN = "login"
     const val REGISTER = "register"
     const val HOME = "home"
+    const val PROFILE = "profile"
 }
 
 @Composable
@@ -23,6 +26,9 @@ fun AppNavGraph(navController: NavHostController) {
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(Routes.HOME) { inclusive = true }
                     }
+                },
+                onNavigateToProfile = {
+                    navController.navigate(Routes.PROFILE)
                 }
             )
         }
@@ -35,6 +41,10 @@ fun AppNavGraph(navController: NavHostController) {
                     navController.navigate(Routes.REGISTER)
                 }
             )
+        }
+
+        composable(Routes.PROFILE) {
+            ProfileScreen()
         }
 
         composable(Routes.REGISTER) {
