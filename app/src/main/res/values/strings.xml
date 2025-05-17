@@ -1,3 +1,22 @@
 <resources>
     <string name="app_name">My Application</string>
+
+    <string name="this_email_already_registered">Bu email zaten kayıtlı</string>
+    <string name="this_email_format_wrong">Mail formatı hatalı</string>
+    <string name="register_fail">Kayıt Başarısız</string>
+    <string name="wrong_password">Şifre Yanlış\n</string>
+    <string name="there_is_no_register_mail">Bu email ile bir kullanıcı bulunamadı</string>
+    <string name="login_fail">Giriş başarısız</string>
+    <string name="welcome">Hoş geldiniz</string>
+    <string name="login_out">Çıkış Yap</string>
+    <string name="login_in">Giriş Yap</string>
+    <string name="no_account_get_register">Hesabın yok mu? Kayıt ol</string>
+    <string name="register">Kayıt ol</string>
+    <string name="email">Email</string>
+    <string name="password">Şifre</string>
+    <string name="password_again">Şifre Tekrar</string>
+    <string name="passwords_dont_match">Şifreler eşleşmiyor</string>
+    <string name="already_have_account_register">Zaten hesabın var mı? Giriş Yap</string>
+    <string name="unknown">Bilinmiyor</string>
+
 </resources>

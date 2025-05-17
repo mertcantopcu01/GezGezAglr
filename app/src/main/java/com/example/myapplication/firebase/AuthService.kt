@@ -1,5 +1,6 @@
 package com.example.myapplication.firebase
 
+import com.example.myapplication.R
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
@@ -16,11 +17,11 @@ object AuthService {
                     onResult(true, null)
                 } else {
                     val message = when (val e = task.exception) {
-                        is FirebaseAuthUserCollisionException -> "Bu email zaten kayıtlı"
-                        is FirebaseAuthInvalidCredentialsException -> "Email formatı hatalı"
-                        else -> e?.localizedMessage ?: "Kayıt başarısız"
+                        is FirebaseAuthUserCollisionException -> R.string.this_email_already_registered
+                        is FirebaseAuthInvalidCredentialsException -> R.string.this_email_format_wrong
+                        else -> e?.localizedMessage ?: R.string.register_fail
                     }
-                    onResult(false, message)
+                    onResult(false, message.toString())
                 }
             }
     }
@@ -33,11 +34,11 @@ object AuthService {
                     onResult(true, null)
                 } else {
                     val message = when (val e = task.exception) {
-                        is FirebaseAuthInvalidCredentialsException -> "Şifre yanlış"
-                        is FirebaseAuthInvalidUserException -> "Bu email ile bir kullanıcı bulunamadı"
-                        else -> e?.localizedMessage ?: "Giriş başarısız"
+                        is FirebaseAuthInvalidCredentialsException -> R.string.wrong_password
+                        is FirebaseAuthInvalidUserException -> R.string.there_is_no_register_mail
+                        else -> e?.localizedMessage ?: R.string.login_fail
                     }
-                    onResult(false, message)
+                    onResult(false, message.toString())
                 }
             }
     }

@@ -5,7 +5,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.myapplication.R
 import com.example.myapplication.firebase.AuthService
 
 @Composable
@@ -19,11 +21,11 @@ fun HomeScreen(onLogout: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = "Hoş geldin!", style = MaterialTheme.typography.headlineMedium)
+        Text(text = stringResource(R.string.welcome), style = MaterialTheme.typography.headlineMedium)
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(text = "Email: ${user?.email ?: "Bilinmiyor"}")
+        Text(text = " ${stringResource(R.string.email)}: ${user?.email}")
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -31,7 +33,7 @@ fun HomeScreen(onLogout: () -> Unit) {
             AuthService.signOut()
             onLogout()
         }) {
-            Text("Çıkış Yap")
+            Text(stringResource(R.string.login_out))
         }
     }
 }
