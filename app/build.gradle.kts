@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -62,6 +62,13 @@ dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.05.00"))
     implementation("androidx.compose.runtime:runtime")
     implementation("androidx.activity:activity-compose:1.8.2")
+
+    implementation(libs.compose.navigation)
+
+    implementation(platform(libs.firebase.bom))
+
+    implementation(libs.firebase.auth)
+
 
 
     debugImplementation("androidx.compose.ui:ui-tooling")

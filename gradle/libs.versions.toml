@@ -9,6 +9,9 @@ espressoCore = "3.6.1"
 compose-bom = "2024.05.00"
 composeCompiler = "1.5.11"
 
+firebase-bom = "32.7.2"
+google-services = "4.4.1"
+
 appcompat = "1.7.0"
 material = "1.12.0"
 activity = "1.10.1"
@@ -30,9 +33,19 @@ compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling
 compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 compose-runtime = { group = "androidx.compose.runtime", name = "runtime" }
 
+compose-navigation = { group = "androidx.navigation", name = "navigation-compose", version = "2.7.7" }
+
+
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebase-bom" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
+firebase-storage = { group = "com.google.firebase", name = "firebase-storage" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+
+google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }
 
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 
