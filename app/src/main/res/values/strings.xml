@@ -32,5 +32,6 @@
     <string name="user_id">Kullanıcı Adı</string>
     <string name="bio">Hakkında</string>
     <string name="share">Paylaş</string>
+    <string name="search_user">Kullanıcı ara...\n</string>
 
 </resources>

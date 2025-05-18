@@ -70,8 +70,8 @@ fun HomeScreen(
         IconButton(
             onClick = onNavigateToSearch,
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 48.dp)
+                .align(Alignment.TopStart)
+                .padding(16.dp)
                 .size(56.dp)
                 .background(
                     color = MaterialTheme.colorScheme.secondary,
@@ -80,7 +80,7 @@ fun HomeScreen(
         ) {
             Icon(
                 imageVector = Icons.Default.Search,
-                contentDescription = "Kullanıcı Ara",
+                contentDescription = stringResource(R.string.search_user),
                 tint = MaterialTheme.colorScheme.onSecondary
             )
         }
