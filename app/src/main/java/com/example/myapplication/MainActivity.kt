@@ -24,7 +24,7 @@ class MainActivity : ComponentActivity() {
             }
 
             Surface(color = MaterialTheme.colorScheme.background) {
-                AppNavGraph(navController = navController)
+                AppNavGraph(navController = navController, startDestination = startDestination)
             }
         }
     }

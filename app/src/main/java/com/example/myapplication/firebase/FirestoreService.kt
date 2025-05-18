@@ -139,4 +139,22 @@ object FirestoreService {
             .addOnFailureListener { onComplete(false) }
     }
 
+    fun searchUsers(query: String, onResult: (List<UserProfile>) -> Unit) {
+        Firebase.firestore.collection("users")
+            .orderBy("username")
+            .startAt(query)
+            .endAt(query + "\uf8ff")
+            .get()
+            .addOnSuccessListener { result ->
+                val users = result.documents.mapNotNull { doc ->
+                    doc.toObject(UserProfile::class.java)
+                        ?.copy(uid = doc.id)
+                }
+                onResult(users)
+            }
+            .addOnFailureListener {
+                onResult(emptyList())
+            }
+    }
+
 }

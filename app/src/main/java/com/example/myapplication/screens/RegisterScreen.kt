@@ -114,30 +114,54 @@ fun RegisterScreen(
         Button(
             onClick = {
                 if (password != confirmPassword) {
-                    errorMessage = context.getString((R.string.passwords_dont_match))
+                    errorMessage = context.getString(R.string.passwords_dont_match)
                     return@Button
                 }
 
                 isLoading = true
                 AuthService.registerUser(email, password) { success, error ->
-                    if (success) {
-                        val uid = AuthService.getCurrentUser()?.uid
-                        if (uid != null) {
-                            if (selectedImageUri != null) {
-                                FirebaseStorageService.uploadImage(context, selectedImageUri!!) { imageUrl ->
-                                    FirestoreService.saveUserProfile(uid, username, bio, imageUrl , password)
-                                    isLoading = false
-                                    onRegisterSuccess()
-                                }
+                    if (!success) {
+                        isLoading = false
+                        errorMessage = error
+                        return@registerUser
+                    }
+
+                    val uid = AuthService.getCurrentUser()?.uid
+                    if (uid == null) {
+                        isLoading = false
+                        errorMessage = "Kullanıcı oluşturulamadı."
+                        return@registerUser
+                    }
+
+                    // Eğer foto seçilmişse önce Storage'a yükle, sonra Firestore kaydı
+                    selectedImageUri?.let { uri ->
+                        FirebaseStorageService.uploadImage(context, uri) { imageUrl ->
+                            // imageUrl null ise hata mesajı göster
+                            if (imageUrl == null) {
+                                isLoading = false
+                                errorMessage = "Resim yüklenirken bir hata oluştu."
                             } else {
-                                FirestoreService.saveUserProfile(uid, username, bio, null , password)
+                                FirestoreService.saveUserProfile(
+                                    uid,
+                                    username,
+                                    bio,
+                                    imageUrl,
+                                    password
+                                )
                                 isLoading = false
                                 onRegisterSuccess()
                             }
                         }
-                    } else {
+                    } ?: run {
+                        FirestoreService.saveUserProfile(
+                            uid,
+                            username,
+                            bio,
+                            null,
+                            password
+                        )
                         isLoading = false
-                        errorMessage = error
+                        onRegisterSuccess()
                     }
                 }
             },
