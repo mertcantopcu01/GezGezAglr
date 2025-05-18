@@ -10,7 +10,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import com.example.myapplication.firebase.FirestoreService
@@ -28,26 +27,43 @@ fun UserProfileScreen(userId: String) {
     }
 
     profile?.let { user ->
-        LazyColumn(modifier = Modifier.padding(16.dp)) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             item {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Image(
                         painter = rememberAsyncImagePainter(user.profileImageUrl ?: ""),
                         contentDescription = null,
-                        modifier = Modifier.size(96.dp).clip(CircleShape)
+                        modifier = Modifier
+                            .size(96.dp)
+                            .clip(CircleShape)
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(user.username, style = MaterialTheme.typography.titleLarge)
-                    user.bio?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                    user.bio?.let {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(it, style = MaterialTheme.typography.bodyMedium)
+                    }
                     Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider()
+                    Divider()
                 }
             }
 
-            items(posts.size) { index ->
-                PostCard(posts[index])
+            items(posts) { post ->
+                PostCard(post)
             }
         }
-    } ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    } ?: Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
         CircularProgressIndicator()
     }
 }
