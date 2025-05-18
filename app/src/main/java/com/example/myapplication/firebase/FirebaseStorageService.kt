@@ -5,30 +5,39 @@ import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
 
 import android.content.Context
+import android.util.Log
+import java.util.UUID
 
 object FirebaseStorageService {
 
-    fun uploadImage(context: Context, uri: Uri, onComplete: (String?) -> Unit) {
-        val storageRef = Firebase.storage.reference
-        val imageRef = storageRef.child("profile_images/${System.currentTimeMillis()}.jpg")
+    private val storageRef = Firebase.storage.reference
+    private val TAG = "FirebaseStorageService"
 
-        try {
-            val stream = context.contentResolver.openInputStream(uri)
-            val uploadTask = imageRef.putStream(stream!!)
 
-            uploadTask.addOnSuccessListener {
-                imageRef.downloadUrl.addOnSuccessListener { downloadUri ->
-                    onComplete(downloadUri.toString())
-                }.addOnFailureListener {
-                    onComplete(null)
-                }
-            }.addOnFailureListener {
-                onComplete(null)
+
+    fun uploadImage(
+        context: Context,
+        imageUri: Uri,
+        onResult: (downloadUrl: String?) -> Unit
+    ) {
+        val fileRef = storageRef.child("profileImages/${UUID.randomUUID()}.jpg")
+
+        fileRef.putFile(imageUri)
+            .addOnSuccessListener {
+                fileRef.downloadUrl
+                    .addOnSuccessListener { uri ->
+                        onResult(uri.toString())
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e(TAG, "indirme hatası : ", e)
+                        onResult(null)
+                    }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            onComplete(null)
-        }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "yükleme hatası : ", e)
+                onResult(null)
+            }
     }
 }
+
 
