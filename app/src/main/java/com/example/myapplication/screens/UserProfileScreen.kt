@@ -1,6 +1,7 @@
 package com.example.myapplication.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,7 +18,10 @@ import com.example.myapplication.firebase.Post
 import com.example.myapplication.firebase.UserProfile
 
 @Composable
-fun UserProfileScreen(userId: String) {
+fun UserProfileScreen(
+    userId: String,
+    onPostClick: (String) -> Unit
+) {
     var profile by remember { mutableStateOf<UserProfile?>(null) }
     var posts by remember { mutableStateOf<List<Post>>(emptyList()) }
 
@@ -57,7 +61,28 @@ fun UserProfileScreen(userId: String) {
             }
 
             items(posts) { post ->
-                PostCard(post)
+                // Her post tıklanabilir hale getiriliyor
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onPostClick(post.postId) },
+                    elevation = CardDefaults.cardElevation(4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(post.title, style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        post.photoUrl?.let { url ->
+                            Image(
+                                painter = rememberAsyncImagePainter(url),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(120.dp)
+                                    .clip(MaterialTheme.shapes.medium)
+                            )
+                        }
+                    }
+                }
             }
         }
     } ?: Box(

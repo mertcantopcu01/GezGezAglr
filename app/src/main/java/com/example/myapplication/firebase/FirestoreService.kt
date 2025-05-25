@@ -21,7 +21,9 @@ data class UserProfile(
 data class Post(
     val postId: String = "",
     val uid: String = "",
-    val text: String = "",
+    val title: String = "",
+    val description: String = "",
+    val rating: Int = 0,
     val photoUrl: String? = null,
     val location: String? = null,
     val timestamp: Long = System.currentTimeMillis()
@@ -97,9 +99,13 @@ object FirestoreService {
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .get()
             .addOnSuccessListener { result ->
-                val posts = result.documents.mapNotNull { it.toObject(Post::class.java) }
+                val posts = result.documents.mapNotNull { doc ->
+                    // Belgeyi Post'e çevir, ardından postId'yi doc.id ile güncelle
+                    doc.toObject(Post::class.java)
+                        ?.copy(postId = doc.id)
+                }
                 onResult(posts)
-                Log.d(TAG, "getUserPosts: ${result.documents.size} adet döküman bulundu.")
+                Log.d(TAG, "getUserPosts: ${posts.size} adet post yüklendi.")
             }
             .addOnFailureListener {
                 Log.e(TAG, "getUserPosts: Firestore çekme hatası", it)
@@ -108,33 +114,27 @@ object FirestoreService {
     }
 
     fun createPost(
-        text: String,
+        title: String,
+        description: String,
+        rating: Int,
         photoUrl: String?,
         location: String?,
         onComplete: (Boolean) -> Unit
     ) {
-        val currentUser = FirebaseAuth.getInstance().currentUser
-        if (currentUser == null) {
-            onComplete(false)
-            return
+        val currentUser = auth.currentUser ?: run {
+            onComplete(false); return
         }
-
-        val post = Post(
-            postId = "", // Otomatik atanacak
-            uid = currentUser.uid,
-            text = text,
-            photoUrl = photoUrl,
-            location = location,
-            timestamp = System.currentTimeMillis()
+        val data = hashMapOf(
+            "uid" to currentUser.uid,
+            "title" to title,
+            "description" to description,
+            "rating" to rating,
+            "photoUrl" to photoUrl,
+            "location" to location,
+            "timestamp" to System.currentTimeMillis()
         )
-
-        val postRef = FirebaseFirestore.getInstance()
-            .collection("posts")
-            .document()
-
-        val postWithId = post.copy(postId = postRef.id)
-
-        postRef.set(postWithId)
+        db.collection("posts")
+            .add(data)
             .addOnSuccessListener { onComplete(true) }
             .addOnFailureListener { onComplete(false) }
     }
@@ -154,6 +154,17 @@ object FirestoreService {
             }
             .addOnFailureListener {
                 onResult(emptyList())
+            }
+    }
+
+    fun getPostById(postId: String, onResult: (Post?) -> Unit) {
+        db.collection("posts").document(postId)
+            .get()
+            .addOnSuccessListener { doc ->
+                onResult(doc.toObject(Post::class.java))
+            }
+            .addOnFailureListener {
+                onResult(null)
             }
     }
 

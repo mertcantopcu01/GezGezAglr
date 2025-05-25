@@ -1,5 +1,6 @@
 package com.example.myapplication.navigation
 
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -15,6 +16,10 @@ object Routes {
     const val PROFILE = "profile"
     const val SEARCH = "search"
     const val USER_PROFILE = "user_profile"
+    const val CREATE_POST = "create_post"
+    const val POST_DETAIL = "post_detail"
+
+
 }
 
 @Composable
@@ -51,7 +56,20 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
         }
 
         composable(Routes.PROFILE) {
-            ProfileScreen()
+            ProfileScreen(
+                onCreatePost = { navController.navigate(Routes.CREATE_POST) },
+                onPostClick  = { postId -> navController.navigate("${Routes.POST_DETAIL}/$postId") }
+            )
+        }
+
+        composable(
+            route = "${Routes.POST_DETAIL}/{postId}",
+            arguments = listOf(navArgument("postId") {
+                type = NavType.StringType
+            })
+        ) { backStack ->
+            val postId = backStack.arguments!!.getString("postId")!!
+            PostDetailScreen(postId = postId)
         }
 
         composable(Routes.REGISTER) {
@@ -63,6 +81,12 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
                     navController.popBackStack()
                 }
             )
+        }
+
+        composable(Routes.CREATE_POST) {
+            CreatePostScreen(onPostCreated = {
+                navController.popBackStack()
+            })
         }
 
         composable(Routes.SEARCH) {
@@ -79,7 +103,12 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
             })
         ) { backStackEntry ->
             val userId = backStackEntry.arguments!!.getString("userId")!!
-            UserProfileScreen(userId = userId)
+            UserProfileScreen(
+                userId = userId,
+                onPostClick = { postId ->
+                    navController.navigate("${Routes.POST_DETAIL}/$postId")
+                }
+            )
         }
     }
 }

@@ -1,8 +1,11 @@
 package com.example.myapplication.screens
 
+import android.util.Log
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -11,23 +14,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.myapplication.R
-
 import coil.compose.rememberAsyncImagePainter
+import com.example.myapplication.R
 import com.example.myapplication.firebase.AuthService
 import com.example.myapplication.firebase.FirestoreService
 import com.example.myapplication.firebase.Post
 import com.example.myapplication.firebase.UserProfile
 
 @Composable
-fun ProfileScreen() {
+fun ProfileScreen(
+    onCreatePost: () -> Unit,
+    onPostClick: (String) -> Unit
+) {
     val uid = AuthService.getCurrentUser()?.uid
     var profile by remember { mutableStateOf<UserProfile?>(null) }
     var posts by remember { mutableStateOf<List<Post>>(emptyList()) }
     val context = LocalContext.current
+    val TAG = "ProfileScreen"
 
-    // Profil bilgileri ve postları çek
+    // Yüklemeler
     LaunchedEffect(uid) {
         uid?.let {
             FirestoreService.getUserProfile(it) { user -> profile = user }
@@ -39,12 +46,17 @@ fun ProfileScreen() {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Profil üst kısmı
             item {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Image(
-                        painter = rememberAsyncImagePainter(user.profileImageUrl ?: "https://via.placeholder.com/150"),
+                        painter = rememberAsyncImagePainter(user.profileImageUrl ?: ""),
                         contentDescription = context.getString(R.string.profil_photo),
                         modifier = Modifier
                             .size(96.dp)
@@ -56,24 +68,50 @@ fun ProfileScreen() {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(text = it, style = MaterialTheme.typography.bodyMedium)
                     }
-
                     Spacer(modifier = Modifier.height(16.dp))
                     Divider()
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Tweet giriş alanı
-                    TweetInputSection(onPostSuccess = {
-                        FirestoreService.getUserPosts(uid!!) { updatedPosts -> posts = updatedPosts }
-                    })
-                    Spacer(modifier = Modifier.height(16.dp))
+                    // Yeni post oluştur butonu
+                    Button(
+                        onClick = {
+                            Log.d(TAG, "Yeni Post At butonuna basıldı")
+                            onCreatePost()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Bir Yer Öner")
+                    }
                 }
             }
 
+            // Post başlık + görsel listesi
             if (posts.isNotEmpty()) {
-                items(posts.size) { index ->
-                    val post = posts[index]
-                    PostCard(post)
-                    Spacer(modifier = Modifier.height(12.dp))
+                items(posts) { post ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onPostClick(post.postId) },
+                        elevation = CardDefaults.cardElevation(4.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = post.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            post.photoUrl?.let { url ->
+                                Image(
+                                    painter = rememberAsyncImagePainter(url),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(120.dp)
+                                        .clip(MaterialTheme.shapes.medium)
+                                )
+                            }
+                        }
+                    }
                 }
             } else {
                 item {
@@ -81,48 +119,19 @@ fun ProfileScreen() {
                         text = context.getString(R.string.there_is_no_tweet),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.Gray,
-                        modifier = Modifier.padding(top = 32.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 32.dp),
+                        textAlign = TextAlign.Center
                     )
                 }
             }
         }
-    } ?: run {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
-    }
-}
-
-@Composable
-fun TweetInputSection(onPostSuccess: () -> Unit) {
-    var tweetText by remember { mutableStateOf("") }
-    val uid = AuthService.getCurrentUser()?.uid ?: return
-    val context = LocalContext.current
-
-
-    Column {
-        OutlinedTextField(
-            value = tweetText,
-            onValueChange = { tweetText = it },
-            label = { Text(context.getString(R.string.what_are_you_thinking)) },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(Modifier.height(8.dp))
-        Button(
-            onClick = {
-                if (tweetText.isNotBlank()) {
-                    FirestoreService.postTweet(uid, tweetText, null, null) {
-                        if (it) {
-                            tweetText = ""
-                            onPostSuccess()
-                        }
-                    }
-                }
-            },
-            modifier = Modifier.align(Alignment.End)
-        ) {
-            Text(context.getString(R.string.share))
-        }
+    } ?: Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator()
     }
 }
 
@@ -133,7 +142,7 @@ fun PostCard(post: Post) {
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(post.text, style = MaterialTheme.typography.bodyLarge)
+            Text(post.title, style = MaterialTheme.typography.bodyLarge)
             post.location?.let {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text("📍 $it", color = Color.Gray, style = MaterialTheme.typography.labelMedium)
@@ -152,3 +161,4 @@ fun PostCard(post: Post) {
         }
     }
 }
+
