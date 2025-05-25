@@ -3,6 +3,8 @@ package com.example.myapplication.firebase
 import android.util.Log
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldPath
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
@@ -26,7 +28,9 @@ data class Post(
     val rating: Int = 0,
     val photoUrl: String? = null,
     val location: String? = null,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val authorName: String = "",
+    val authorImageUrl: String? = null
 )
 
 object FirestoreService {
@@ -166,6 +170,176 @@ object FirestoreService {
             .addOnFailureListener {
                 onResult(null)
             }
+    }
+
+    fun followUser(
+        followerId: String,
+        followingId: String,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
+        val docId = "${followerId}_$followingId"
+        val data = mapOf(
+            "followerId" to followerId,
+            "followingId" to followingId,
+            "timestamp" to FieldValue.serverTimestamp()
+        )
+        db.collection("follows")
+            .document(docId)
+            .set(data)
+            .addOnSuccessListener { onComplete(true, null) }
+            .addOnFailureListener { e -> onComplete(false, e.message) }
+    }
+
+    fun unfollowUser(
+        followerId: String,
+        followingId: String,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
+        val docId = "${followerId}_$followingId"
+        db.collection("follows")
+            .document(docId)
+            .delete()
+            .addOnSuccessListener { onComplete(true, null) }
+            .addOnFailureListener { e -> onComplete(false, e.message) }
+    }
+
+    fun isFollowing(
+        followerId: String,
+        followingId: String,
+        onResult: (Boolean) -> Unit
+    ) {
+        val docId = "${followerId}_$followingId"
+        db.collection("follows")
+            .document(docId)
+            .get()
+            .addOnSuccessListener { snap ->
+                onResult(snap.exists())
+            }
+            .addOnFailureListener { _ ->
+                onResult(false)
+            }
+    }
+
+    fun getFollowersCount(
+        userId: String,
+        onResult: (Int) -> Unit
+    ) {
+        db.collection("follows")
+            .whereEqualTo("followingId", userId)
+            .get()
+            .addOnSuccessListener { snap ->
+                onResult(snap.size())
+            }
+            .addOnFailureListener {
+                onResult(0)
+            }
+    }
+
+    fun getFollowingCount(
+        userId: String,
+        onResult: (Int) -> Unit
+    ) {
+        db.collection("follows")
+            .whereEqualTo("followerId", userId)
+            .get()
+            .addOnSuccessListener { snap ->
+                onResult(snap.size())
+            }
+            .addOnFailureListener {
+                onResult(0)
+            }
+    }
+
+    fun getFollowingIds(
+        followerId: String,
+        onResult: (List<String>) -> Unit
+    ) {
+        db.collection("follows")
+            .whereEqualTo("followerId", followerId)
+            .get()
+            .addOnSuccessListener { snap ->
+                val ids = snap.documents.mapNotNull { it.getString("followingId") }
+                onResult(ids)
+            }
+            .addOnFailureListener {
+                onResult(emptyList())
+            }
+    }
+    fun getPostsByUserIds(
+        userIds: List<String>,
+        onResult: (List<Post>) -> Unit
+    ) {
+        if (userIds.isEmpty()) {
+            onResult(emptyList())
+            return
+        }
+        db.collection("posts")
+            .whereIn("uid", userIds.take(10))
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .get()
+            .addOnSuccessListener { snap ->
+                val posts = snap.documents.mapNotNull { doc ->
+                    doc.toObject(Post::class.java)?.copy(postId = doc.id)
+                }
+                onResult(posts)
+            }
+            .addOnFailureListener {
+                onResult(emptyList())
+            }
+    }
+
+    fun getFollowersList(
+        userId: String,
+        onResult: (List<UserProfile>) -> Unit
+    ) {
+        db.collection("follows")
+            .whereEqualTo("followingId", userId)
+            .get()
+            .addOnSuccessListener { snaps ->
+                val ids = snaps.documents.mapNotNull { it.getString("followerId") }
+                if (ids.isEmpty()) {
+                    onResult(emptyList()); return@addOnSuccessListener
+                }
+                db.collection("users")
+                    .whereIn(FieldPath.documentId(), ids)
+                    .get()
+                    .addOnSuccessListener { docs ->
+                        val users = docs.mapNotNull { it.toObject(UserProfile::class.java)?.copy(uid = it.id) }
+                        onResult(users)
+                    }
+            }
+            .addOnFailureListener { onResult(emptyList()) }
+    }
+
+    fun getFollowingList(
+        userId: String,
+        onResult: (List<UserProfile>) -> Unit
+    ) {
+        db.collection("follows")
+            .whereEqualTo("followerId", userId)
+            .get()
+            .addOnSuccessListener { snaps ->
+                val ids = snaps.documents.mapNotNull { it.getString("followingId") }
+                if (ids.isEmpty()) {
+                    onResult(emptyList()); return@addOnSuccessListener
+                }
+                db.collection("users")
+                    .whereIn(FieldPath.documentId(), ids)
+                    .get()
+                    .addOnSuccessListener { docs ->
+                        val users = docs.mapNotNull { it.toObject(UserProfile::class.java)?.copy(uid = it.id) }
+                        onResult(users)
+                    }
+            }
+            .addOnFailureListener { onResult(emptyList()) }
+    }
+
+    fun deletePost(postId: String, onComplete: (Boolean) -> Unit) {
+        db.collection("posts")
+            .document(postId)
+            .delete()
+            .addOnSuccessListener { onComplete(true) }
+            .addOnFailureListener { onComplete(false) }
     }
 
 }

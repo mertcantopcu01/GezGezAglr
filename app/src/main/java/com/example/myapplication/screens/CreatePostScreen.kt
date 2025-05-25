@@ -2,7 +2,10 @@ package com.example.myapplication.screens
 
 
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -36,9 +39,20 @@ fun CreatePostScreen(
     var isLoading by remember { mutableStateOf(false) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
 
-    val imagePicker = rememberLauncherForActivityResult(GetContent()) { uri: Uri? ->
-        selectedImageUri = uri
-    }
+
+    val openDocumentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+        onResult = { uri ->
+            selectedImageUri = uri
+        }
+    )
+
+    val pickMediaLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri ->
+            selectedImageUri = uri
+        }
+    )
 
     Column(modifier = Modifier
         .fillMaxSize()
@@ -72,7 +86,17 @@ fun CreatePostScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
-        Button(onClick = { imagePicker.launch("image/*") }) {
+        Button(onClick = {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                pickMediaLauncher.launch(
+                    PickVisualMediaRequest(
+                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                )
+                )
+            } else {
+                openDocumentLauncher.launch(arrayOf("image/*"))
+            }
+        }) {
             Text("Fotoğraf Seç")
         }
         selectedImageUri?.let {
@@ -99,7 +123,6 @@ fun CreatePostScreen(
                     return@Button
                 }
                 isLoading = true
-                // 1) Fotoğraf varsa önce Storage'a yükle
                 if (selectedImageUri != null) {
                     FirebaseStorageService.uploadImage(context, selectedImageUri!!) { url ->
                         savePostAndReturn(title, description, rating.toInt(), url, onPostCreated) {
