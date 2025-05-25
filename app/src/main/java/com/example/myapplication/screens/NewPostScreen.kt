@@ -92,9 +92,11 @@ fun NewPostScreen(onPostSuccess: () -> Unit) {
                 if (selectedImageUri != null) {
                     FirebaseStorageService.uploadImage(context, selectedImageUri!!) { imageUrl ->
                         FirestoreService.createPost(
-                            text = text.text,
+                            description = text.text,
                             photoUrl = imageUrl,
-                            location = location.text
+                            location = location.text,
+                            title = null.toString(),
+                            rating = 0
                         ) { success ->
                             isLoading = false
                             if (success) onPostSuccess()
@@ -103,9 +105,11 @@ fun NewPostScreen(onPostSuccess: () -> Unit) {
                     }
                 } else {
                     FirestoreService.createPost(
-                        text = text.text,
+                        description = text.text,
                         photoUrl = null,
-                        location = location.text
+                        location = location.text,
+                        title = null.toString(),
+                        rating = 0
                     ) { success ->
                         isLoading = false
                         if (success) onPostSuccess()
