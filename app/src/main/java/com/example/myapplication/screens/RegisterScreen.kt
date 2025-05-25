@@ -1,11 +1,16 @@
 package com.example.myapplication.screens
 
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +26,7 @@ import com.example.myapplication.firebase.AuthService
 import com.example.myapplication.firebase.FirestoreService
 import com.example.myapplication.firebase.FirebaseStorageService
 import androidx.compose.ui.res.stringResource
+
 
 
 @Composable
@@ -39,14 +45,27 @@ fun RegisterScreen(
     val context = LocalContext.current
 
 
-    val imagePickerLauncher = rememberLauncherForActivityResult(GetContent()) { uri: Uri? ->
-        uri?.let { selectedImageUri = it }
-        Log.d("RegisterScreen", "Seçilen Görsel URI: $uri")
-    }
+    val openDocumentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+        onResult = { uri ->
+            selectedImageUri = uri
+        }
+    )
+
+    val pickMediaLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri ->
+            selectedImageUri = uri
+        }
+    )
+
+    // ScrollState oluştur
+    val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(scrollState)
             .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -94,7 +113,17 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Button(onClick = { imagePickerLauncher.launch("image/*") }) {
+        Button(onClick = {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                pickMediaLauncher.launch(
+                    PickVisualMediaRequest(
+                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                )
+                )
+            } else {
+                openDocumentLauncher.launch(arrayOf("image/*"))
+            }
+        }) {
             Text(context.getString(R.string.choose_photo))
         }
 
@@ -133,10 +162,8 @@ fun RegisterScreen(
                         return@registerUser
                     }
 
-                    // Eğer foto seçilmişse önce Storage'a yükle, sonra Firestore kaydı
                     selectedImageUri?.let { uri ->
                         FirebaseStorageService.uploadImage(context, uri) { imageUrl ->
-                            // imageUrl null ise hata mesajı göster
                             if (imageUrl == null) {
                                 isLoading = false
                                 errorMessage = "Resim yüklenirken bir hata oluştu."
@@ -179,5 +206,7 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(12.dp))
             Text(text = it, color = Color.Red)
         }
+
+        Spacer(modifier = Modifier.height(16.dp)) // Alt boşluk
     }
 }
