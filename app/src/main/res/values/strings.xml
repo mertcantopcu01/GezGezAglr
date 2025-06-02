@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">My Application</string>
+    <string name="app_name">GezGezAglr</string>
 
     <string name="this_email_already_registered">Bu email zaten kayıtlı</string>
     <string name="this_email_format_wrong">Mail formatı hatalı</string>
@@ -33,5 +33,9 @@
     <string name="bio">Hakkında</string>
     <string name="share">Paylaş</string>
     <string name="search_user">Kullanıcı ara...\n</string>
+    <string name="chosen_photo">Seçilen Foto</string>
+    <string name="place_name">Mekan İsmi</string>
+    <string name="description">Açıklama\n</string>
+    <string name="create_post">Gönderi Oluştur</string>
 
 </resources>

@@ -27,12 +27,6 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
         // — Home
         composable(Routes.HOME) {
             HomeScreen(
-                onLogout = {
-                    AuthService.signOut()
-                    navController.navigate(Routes.LOGIN) {
-                        popUpTo(Routes.HOME) { inclusive = true }
-                    }
-                },
                 onNavigateToProfile = {
                     AuthService.getCurrentUser()?.uid
                         ?.let { navController.navigate("${Routes.USER_PROFILE}/$it") }
@@ -97,6 +91,14 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
                 onFollowersClick  = { navController.navigate("${Routes.FOLLOWERS_LIST}/$userId") },
                 onFollowingClick  = { navController.navigate("${Routes.FOLLOWING_LIST}/$userId") },
                 onCreatePost     = { navController.navigate(Routes.CREATE_POST) },
+                onLogout = {
+                    AuthService.signOut()
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            inclusive = true
+                        }
+                    }
+                }
             )
         }
 
