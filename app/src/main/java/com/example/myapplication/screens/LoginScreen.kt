@@ -34,8 +34,7 @@ fun LoginScreen(
     var isLoading by remember { mutableStateOf(false) }
 
     // TextField renklerini, kendi TextFieldStyles sınıfınızla belirleyebilirsiniz
-    val tfColors = TextFieldStyles.defaultTextFieldColors(
-    )
+    val tfColors = TextFieldStyles.defaultTextFieldColors()
 
     // Arka plan için kullanılacak degradeli boya (mavi → yeşil)
     val backgroundGradient = Brush.linearGradient(
