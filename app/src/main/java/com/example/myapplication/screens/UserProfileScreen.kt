@@ -1,17 +1,16 @@
 package com.example.myapplication.screens
 
-import android.util.Log
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
@@ -19,276 +18,454 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.wear.compose.material.ExperimentalWearMaterialApi
+import androidx.wear.compose.material.FractionalThreshold
+import androidx.wear.compose.material.rememberSwipeableState
+import androidx.wear.compose.material.swipeable
 import coil.compose.rememberAsyncImagePainter
 import com.example.myapplication.R
 import com.example.myapplication.firebase.AuthService
 import com.example.myapplication.firebase.FirestoreService
 import com.example.myapplication.firebase.Post
 import com.example.myapplication.firebase.UserProfile
+import com.example.myapplication.ui.theme.AppTheme
+import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class,
-    ExperimentalFoundationApi::class
-)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalWearMaterialApi::class)
 @Composable
 fun UserProfileScreen(
     userId: String,
+    onBack: () -> Unit,
     onCreatePost: () -> Unit,
     onPostClick: (String) -> Unit,
     onFollowersClick: (String) -> Unit,
     onFollowingClick: (String) -> Unit,
     onLogout: () -> Unit,
 ) {
-    val currentUserId = AuthService.getCurrentUser()?.uid
-    var profile by remember { mutableStateOf<UserProfile?>(null) }
-    var posts by remember { mutableStateOf<List<Post>>(emptyList()) }
-    var isFollowing by remember { mutableStateOf(false) }
-    var followersCount by remember { mutableStateOf(0) }
-    var followingCount by remember { mutableStateOf(0) }
-    var isLoadingFollow by remember { mutableStateOf(false) }
+    AppTheme {
+        val currentUserId = AuthService.getCurrentUser()?.uid
+        var profile by remember { mutableStateOf<UserProfile?>(null) }
+        var posts by remember { mutableStateOf<List<Post>>(emptyList()) }
+        var isFollowing by remember { mutableStateOf(false) }
+        var followersCount by remember { mutableStateOf(0) }
+        var followingCount by remember { mutableStateOf(0) }
+        var isLoadingFollow by remember { mutableStateOf(false) }
 
-    var postToDelete by remember { mutableStateOf<Post?>(null) }
-    var showDeleteDialog by remember { mutableStateOf(false) }
+        var postToDelete by remember { mutableStateOf<Post?>(null) }
+        var showDeleteDialog by remember { mutableStateOf(false) }
 
-    // Degradeli arka plan renkleri
-    val gradientColors = listOf(
-        colorResource(id = R.color.blue_900),
-        colorResource(id = R.color.green_800)
-    )
-
-    LaunchedEffect(userId) {
-        FirestoreService.getUserProfile(userId)    { profile = it }
-        FirestoreService.getUserPosts(userId)      { posts = it }
-        FirestoreService.getFollowersCount(userId) { followersCount = it }
-        FirestoreService.getFollowingCount(userId) { followingCount = it }
-        if (currentUserId != null && currentUserId != userId) {
-            FirestoreService.isFollowing(currentUserId, userId) { isFollowing = it }
-        }
-    }
-
-    // Silme onayı varsa AlertDialog göster
-    if (showDeleteDialog && postToDelete != null) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Gönderiyi Sil") },
-            text = { Text("Bu gönderiyi silmek istediğinize emin misiniz?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    FirestoreService.deletePost(postToDelete!!.postId) { success ->
-                        if (success) posts = posts.filterNot { it.postId == postToDelete!!.postId }
-                        postToDelete = null
-                        showDeleteDialog = false
-                    }
-                }) { Text("Evet") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Hayır") }
+        // Load user data
+        LaunchedEffect(userId) {
+            FirestoreService.getUserProfile(userId) { profile = it }
+            FirestoreService.getUserPosts(userId) { posts = it }
+            FirestoreService.getFollowersCount(userId) { followersCount = it }
+            FirestoreService.getFollowingCount(userId) { followingCount = it }
+            if (currentUserId != null && currentUserId != userId) {
+                FirestoreService.isFollowing(currentUserId, userId) { isFollowing = it }
             }
-        )
-    }
+        }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                brush = Brush.linearGradient(
-                    colors = gradientColors,
-                    start = Offset(0f, 0f),
-                    end = Offset(0f, Float.POSITIVE_INFINITY)
-                )
-            )
-    ) {
-        profile?.let { user ->
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                item {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Image(
-                            painter = rememberAsyncImagePainter(user.profileImageUrl ?: ""),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(96.dp)
-                                .clip(CircleShape)
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(user.username, style = MaterialTheme.typography.titleLarge, color = Color.White)
-                        user.bio?.let {
-                            Spacer(Modifier.height(4.dp))
-                            Text(it, style = MaterialTheme.typography.bodyMedium, color = Color.White)
-                        }
-
-                        Spacer(Modifier.height(12.dp))
-                        Row(
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier
-                                    .clickable { onFollowersClick(userId) }
-                                    .padding(8.dp)
-                            ) {
-                                Text("$followersCount", style = MaterialTheme.typography.titleMedium, color = Color.White)
-                                Text("Takipçi", style = MaterialTheme.typography.bodySmall, color = Color.White)
+        // Delete confirmation dialog
+        if (showDeleteDialog && postToDelete != null) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Gönderiyi Sil", style = MaterialTheme.typography.titleMedium) },
+                text = { Text("Bu gönderiyi silmek istediğinize emin misiniz?", style = MaterialTheme.typography.bodyMedium) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        FirestoreService.deletePost(postToDelete!!.postId) { success ->
+                            if (success) {
+                                posts = posts.filterNot { it.postId == postToDelete!!.postId }
                             }
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier
-                                    .clickable { onFollowingClick(userId) }
-                                    .padding(8.dp)
-                            ) {
-                                Text("$followingCount", style = MaterialTheme.typography.titleMedium, color = Color.White)
-                                Text("Takip Edilen", style = MaterialTheme.typography.bodySmall, color = Color.White)
-                            }
+                            postToDelete = null
+                            showDeleteDialog = false
                         }
-
-                        Spacer(Modifier.height(16.dp))
-
-                        if (currentUserId != null && currentUserId == userId) {
-                            Button(
-                                onClick = onCreatePost,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 32.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.White,
-                                    contentColor = MaterialTheme.colorScheme.primary
-                                )
-                            ) { Text("Gönderi Paylaş") }
-                            Spacer(Modifier.height(16.dp))
-                        } else if (currentUserId != null) {
-                            Button(
-                                onClick = {
-                                    isLoadingFollow = true
-                                    if (isFollowing) {
-                                        FirestoreService.unfollowUser(currentUserId, userId) { success, _ ->
-                                            if (success) {
-                                                isFollowing = false
-                                                followersCount--
-                                            }
-                                            isLoadingFollow = false
-                                        }
-                                    } else {
-                                        FirestoreService.followUser(currentUserId, userId) { success, _ ->
-                                            if (success) {
-                                                isFollowing = true
-                                                followersCount++
-                                            }
-                                            isLoadingFollow = false
-                                        }
-                                    }
-                                },
-                                enabled = !isLoadingFollow,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 32.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.White,
-                                    contentColor = MaterialTheme.colorScheme.primary
-                                )
-                            ) {
-                                Text(
-                                    when {
-                                        isLoadingFollow -> "Lütfen bekleyin..."
-                                        isFollowing      -> "Takipten Çık"
-                                        else             -> "Takip Et"
-                                    }
-                                )
-                            }
-                            Spacer(Modifier.height(16.dp))
-                        }
-
-                        Divider(color = Color.White.copy(alpha = 0.6f))
-                    }
+                    }) { Text("Evet") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) { Text("Hayır") }
                 }
+            )
+        }
 
-                items(posts) { post ->
-                    val isMine = currentUserId == userId
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .combinedClickable(
-                                onClick = { onPostClick(post.postId) },
-                                onLongClick = {
-                                    if (isMine) {
-                                        postToDelete = post
-                                        showDeleteDialog = true
-                                    }
-                                }
-                            ),
-                        elevation = CardDefaults.cardElevation(4.dp)
-                    ) {
-                        Row(
-                            Modifier
+        // Handle system back
+        BackHandler { onBack() }
+
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Geri")
+                        }
+                    },
+                    title = {
+                        Text(
+                            text = profile?.username.orEmpty(),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    actions = {
+                        if (currentUserId == userId) {
+                            IconButton(onClick = {
+                                AuthService.signOut()
+                                onLogout()
+                            }) {
+                                Icon(Icons.Default.ExitToApp, contentDescription = "Çıkış")
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.smallTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                        actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                )
+            },
+            containerColor = MaterialTheme.colorScheme.background
+        ) { padding ->
+            profile?.let { user ->
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Profile header
+                    item {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .background(MaterialTheme.colorScheme.primaryContainer)
+                                .padding(vertical = 16.dp)
                         ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(post.title, style = MaterialTheme.typography.titleMedium)
-                                Spacer(Modifier.height(8.dp))
-                                post.photoUrl?.let { url ->
-                                    Image(
-                                        painter = rememberAsyncImagePainter(url),
-                                        contentDescription = null,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(120.dp)
-                                            .clip(MaterialTheme.shapes.medium)
+                            val painter = rememberAsyncImagePainter(user.profileImageUrl ?: "")
+                            Image(
+                                painter = painter,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(96.dp)
+                                    .clip(CircleShape)
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = user.username,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            user.bio?.let {
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = it,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier
+                                        .clickable { onFollowersClick(userId) }
+                                        .padding(8.dp)
+                                ) {
+                                    Text(
+                                        "$followersCount",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Text(
+                                        "Takipçi",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier
+                                        .clickable { onFollowingClick(userId) }
+                                        .padding(8.dp)
+                                ) {
+                                    Text(
+                                        "$followingCount",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Text(
+                                        "Takip Edilen",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
                             }
-                            if (isMine) {
-                                IconButton(
+                            Spacer(Modifier.height(16.dp))
+                            if (currentUserId == userId) {
+                                Button(
+                                    onClick = onCreatePost,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 32.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondary,
+                                        contentColor = MaterialTheme.colorScheme.onSecondary
+                                    )
+                                ) {
+                                    Text("Gönderi Paylaş")
+                                }
+                            } else {
+                                Button(
                                     onClick = {
-                                        postToDelete = post
-                                        showDeleteDialog = true
-                                    }
+                                        isLoadingFollow = true
+                                        if (isFollowing) {
+                                            FirestoreService.unfollowUser(currentUserId!!, userId) { success, _ ->
+                                                if (success) {
+                                                    isFollowing = false
+                                                    followersCount--
+                                                }
+                                                isLoadingFollow = false
+                                            }
+                                        } else {
+                                            FirestoreService.followUser(currentUserId!!, userId) { success, _ ->
+                                                if (success) {
+                                                    isFollowing = true
+                                                    followersCount++
+                                                }
+                                                isLoadingFollow = false
+                                            }
+                                        }
+                                    },
+                                    enabled = !isLoadingFollow,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 32.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondary,
+                                        contentColor = MaterialTheme.colorScheme.onSecondary
+                                    )
+                                ) {
+                                    Text(
+                                        when {
+                                            isLoadingFollow -> "Lütfen Bekleyin..."
+                                            isFollowing      -> "Takipten Çık"
+                                            else             -> "Takip Et"
+                                        }
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(16.dp))
+                            Divider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.3f))
+                        }
+                    }
+
+                    // Posts with swipe-to-delete for own profile
+                    items(posts, key = { it.postId }) { post ->
+                        if (currentUserId == userId) {
+                            // 1) Sağ swipe için pozitif değer
+                            val maxDragPx = with(LocalDensity.current) { -50.dp.toPx() }
+                            val swipeState = rememberSwipeableState(0)
+                            val anchors = mapOf(
+                                0f      to 0,   // başlangıç
+                                maxDragPx to 1   // swiped
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 8.dp)
+                                    .fillMaxWidth()
+                                    .height(IntrinsicSize.Min)
+                                    .clip(MaterialTheme.shapes.medium)
+                                    .swipeable(
+                                        state = swipeState,
+                                        anchors = anchors,
+                                        thresholds = { _, _ -> FractionalThreshold(0.3f) },
+                                        orientation = Orientation.Horizontal
+                                    )
+                            ) {
+                                // 2) Arka plan: sola doğru açıkta kalan kısım
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .clip(MaterialTheme.shapes.medium)
+                                        .background(MaterialTheme.colorScheme.error)
+                                        .padding(end = 16.dp),             // sağdan iç boşluk
+                                    contentAlignment = Alignment.CenterEnd // sağda ve dikey ortada
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Delete,
+                                        imageVector    = Icons.Default.Delete,
                                         contentDescription = "Sil",
-                                        tint = MaterialTheme.colorScheme.error
+                                        tint           = Color.White,
+                                        modifier       = Modifier
+                                            .size(24.dp)                   // uygun boyut
+                                            .clickable {
+                                                postToDelete = post
+                                                showDeleteDialog = true
+                                            }
                                     )
                                 }
+                                // 4) Kartı swipeState.offset kadar kaydır ve sabitle
+                                HomePostItem(
+                                    post = post,
+                                    authorProfile = profile,
+                                    onUserClick = {},
+                                    onPostClick = { onPostClick(post.postId) },
+                                    modifier = Modifier
+                                        .offset { IntOffset(swipeState.offset.value.roundToInt(), 0) }
+                                        .fillMaxWidth()
+                                )
                             }
+                        } else {
+                            HomePostItem(
+                                post = post,
+                                authorProfile = profile,
+                                onUserClick = {},
+                                onPostClick = { onPostClick(post.postId) }
+                            )
                         }
                     }
                 }
-            }
-        } ?: Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
-        }
-
-        if(currentUserId == userId){
-            IconButton(
-                onClick = {
-                    AuthService.signOut()
-                    onLogout()
-                },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
+            } ?: Box(
+                Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.ExitToApp,
-                    contentDescription = "Çıkış Yap",
-                    tint = Color.White
-                )
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
+        }
+    }
+}
+
+@Composable
+fun PostItem(
+    post: Post,
+    authorProfile: UserProfile?,
+    onUserClick: (String) -> Unit,
+    onPostClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = MaterialTheme.colorScheme
+    val painter = rememberAsyncImagePainter(model = post.photoUrl)
+    val profileImagePainter = rememberAsyncImagePainter(
+        model = if (authorProfile?.profileImageUrl.isNullOrEmpty())
+            R.drawable.unknown_avatar
+        else
+            authorProfile?.profileImageUrl
+    )
+
+    AppTheme {
+        Card(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(150.dp)
+                .clickable { onPostClick(post.postId) },
+            elevation = CardDefaults.cardElevation(4.dp),
+            shape = MaterialTheme.shapes.medium
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(
+                    modifier = Modifier
+                        .width(150.dp)
+                        .fillMaxHeight()
+                ) {
+                    // profil resmi + kullanıcı adı
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 4.dp)
+                    ) {
+                        if (authorProfile != null) {
+                            Image(
+                                painter = profileImagePainter,
+                                contentDescription = "Yazar fotoğrafı",
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .clickable { onUserClick(post.uid) }
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = authorProfile.username,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color.Blue,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onUserClick(post.uid) }
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(colors.onBackground.copy(alpha = 0.1f))
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "Yükleniyor...",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = colors.onBackground.copy(alpha = 0.6f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    // başlık
+                    Text(
+                        text = if (post.title.length > 9) post.title.take(9) + "…" else post.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = colors.onBackground,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+
+                    // açıklama
+                    Text(
+                        text = post.description.orEmpty(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.onBackground.copy(alpha = 0.7f),
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    // rating
+                    Text(
+                        text = "⭐ ${post.rating}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.onBackground.copy(alpha = 0.7f),
+                        maxLines = 1
+                    )
+                }
+
+                Spacer(Modifier.width(8.dp))
+
+                post.photoUrl?.let {
+                    Image(
+                        painter = painter,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .weight(1f)
+                            .clip(MaterialTheme.shapes.small)
+                    )
+                }
             }
         }
     }

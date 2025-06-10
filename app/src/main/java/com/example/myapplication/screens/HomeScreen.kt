@@ -1,36 +1,35 @@
 package com.example.myapplication.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
-import com.example.myapplication.R
 import com.example.myapplication.firebase.AuthService
 import com.example.myapplication.firebase.FirestoreService
 import com.example.myapplication.firebase.Post
 import com.example.myapplication.firebase.UserProfile
+import com.example.myapplication.ui.theme.AppTheme
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onUserClick: (String) -> Unit,
@@ -39,307 +38,204 @@ fun HomeScreen(
     onPostClick: (String) -> Unit
 ) {
     val currentUid = AuthService.getCurrentUser()?.uid
-    var feedPosts by remember { mutableStateOf(emptyList<Post>()) }
+    var feedPosts by remember { mutableStateOf<List<Post>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
-
-    // Degradeli arka plan renkleri
-    val gradientColors = listOf(
-        colorResource(id = R.color.blue_900),
-        colorResource(id = R.color.green_800)
-    )
+    val colors = MaterialTheme.colorScheme
 
     LaunchedEffect(currentUid) {
         if (currentUid == null) {
             isLoading = false
             errorMsg = "Oturum açılmamış."
-            return@LaunchedEffect
-        }
-        FirestoreService.getFollowingIds(currentUid) { followingIds ->
-            FirestoreService.getPostsByUserIds(followingIds) { posts ->
-                feedPosts = posts
-                isLoading = false
-            }
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                brush = Brush.linearGradient(
-                    colors = gradientColors,
-                    start = Offset(0f, 0f),
-                    end = Offset(0f, Float.POSITIVE_INFINITY)
-                )
-            )
-    ) {
-        when {
-            isLoading -> {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center),
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-            }
-            errorMsg != null -> {
-                Text(
-                    text = errorMsg!!,
-                    color = Color.White,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
-            else -> {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 80.dp,
-                        bottom = 80.dp
-                    )
-                ) {
-                    items(feedPosts) { post ->
-                        // Yazar profili kontrolü
-                        val authorProfile by produceState<UserProfile?>(initialValue = null, key1 = post.uid) {
-                            FirestoreService.getUserProfile(post.uid) { user ->
-                                value = user
-                            }
-                        }
-
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onPostClick(post.postId) },
-                            elevation = CardDefaults.cardElevation(4.dp)
-                        ) {
-                            Column(Modifier.padding(12.dp)) {
-                                authorProfile?.let { author ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(bottom = 4.dp),
-                                        horizontalArrangement = Arrangement.End,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = author.username,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier
-                                                .clickable { onUserClick(post.uid) }
-                                                .padding(end = 8.dp)
-                                        )
-                                        author.profileImageUrl?.let { url ->
-                                            Image(
-                                                painter = rememberAsyncImagePainter(url),
-                                                contentDescription = "Yazar fotoğrafı",
-                                                modifier = Modifier
-                                                    .size(24.dp)
-                                                    .clip(CircleShape)
-                                                    .clickable { onUserClick(author.uid) }
-                                            )
-                                        }
-                                    }
-                                }
-
-                                Text(
-                                    text = post.title,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.padding(bottom = 8.dp)
-                                )
-                                post.photoUrl?.let { url ->
-                                    Image(
-                                        painter = rememberAsyncImagePainter(url),
-                                        contentDescription = null,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(120.dp)
-                                            .clip(MaterialTheme.shapes.medium)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "⭐ ${post.rating}    📍 ${post.location
-                                        ?: "-"}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.Gray
-                                )
-                            }
-                        }
-                    }
+        } else {
+            FirestoreService.getFollowingIds(currentUid) { ids ->
+                FirestoreService.getPostsByUserIds(ids) { posts ->
+                    feedPosts = posts
+                    isLoading = false
                 }
             }
         }
+    }
 
-        // Profil ikonu (üst sağda)
-        IconButton(
-            onClick = onNavigateToProfile,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(16.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Person,
-                contentDescription = stringResource(R.string.go_profile),
-                tint = MaterialTheme.colorScheme.onPrimary
-            )
-        }
-
-        // Arama ikonu (üst solda)
-        IconButton(
-            onClick = onNavigateToSearch,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(16.dp)
-                .size(56.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.secondary,
-                    shape = CircleShape
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "GEZGEZAGLR",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = colors.onPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateToSearch) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Ara",
+                            tint = colors.onPrimary
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onNavigateToProfile) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Profil",
+                            tint = colors.onPrimary
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.smallTopAppBarColors(
+                    containerColor = colors.primary,
+                    titleContentColor = colors.onPrimary,
+                    navigationIconContentColor = colors.onPrimary,
+                    actionIconContentColor = colors.onPrimary
                 )
-        ) {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = stringResource(R.string.search_user),
-                tint = MaterialTheme.colorScheme.onSecondary
             )
-        }
-    }
-}
-
-@Preview(showBackground = true, widthDp = 360, heightDp = 640)
-@Composable
-fun HomeScreenFullPreview() {
-    // Örnek veri
-    val samplePosts = listOf(
-        Post(postId = "1", uid = "u1", title = "Açık Hava Konseri", photoUrl = "https://picsum.photos/200", rating = 4, location = "İstanbul"),
-        Post(postId = "2", uid = "u2", title = "Tech Meetup", photoUrl = null, rating = 3, location = "Ankara"),
-        Post(postId = "3", uid = "u1", title = "Sevgi Adası", photoUrl = "https://picsum.photos/201", rating = 5, location = "Adana")
-    )
-    val fakeProfiles = mapOf(
-        "u1" to UserProfile(uid = "u1", username = "Ali", profileImageUrl = null),
-        "u2" to UserProfile(uid = "u2", username = "Ayşe", profileImageUrl = "https://picsum.photos/50")
-    )
-
-    MaterialTheme {
-        // Preview için hata durumunu pas geçip doğrudan içerik gösterelim
-        HomeScreenContent(
-            feedPosts = samplePosts,
-            authorProfiles = fakeProfiles,
-            onUserClick = {},
-            onLogout = {},
-            onNavigateToProfile = {},
-            onNavigateToSearch = {},
-            onPostClick = {}
-        )
-    }
-}
-
-@Composable
-fun HomeScreenContent(
-    feedPosts: List<Post>,
-    authorProfiles: Map<String, UserProfile?>,
-    onUserClick: (String) -> Unit,
-    onLogout: () -> Unit,
-    onNavigateToProfile: () -> Unit,
-    onNavigateToSearch: () -> Unit,
-    onPostClick: (String) -> Unit
-) {
-    // Aynı gradient background'u içerikten önce buraya da ekleyebilirsiniz,
-    // ancak genelde HomeScreen üzerinde hallettiğimiz için burada bırakmadık.
-    Box(Modifier.fillMaxSize()) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(16.dp, top = 80.dp, bottom = 80.dp)
+        },
+        containerColor = colors.background
+    ) { contentPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colors.background)
         ) {
-            items(feedPosts) { post ->
-                val author = authorProfiles[post.uid]
-                Card(
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable { onPostClick(post.postId) },
-                    elevation = CardDefaults.cardElevation(4.dp)
+            when {
+                isLoading -> CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center),
+                    color = colors.primary
+                )
+                errorMsg != null -> Text(
+                    text = errorMsg!!,
+                    modifier = Modifier.align(Alignment.Center),
+                    color = colors.error
+                )
+                else -> LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(contentPadding)
+                        .padding(horizontal = 16.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column(Modifier.padding(12.dp)) {
-                        author?.let {
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 4.dp),
-                                horizontalArrangement = Arrangement.End,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    it.username,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier
-                                        .clickable { onUserClick(it.uid) }
-                                        .padding(end = 8.dp)
-                                )
-                                it.profileImageUrl?.let { url ->
-                                    Image(
-                                        painter = rememberAsyncImagePainter(url),
-                                        contentDescription = "Yazar fotoğrafı",
-                                        modifier = Modifier
-                                            .size(46.dp)
-                                            .clip(CircleShape)
-                                            .clickable { onUserClick(it.uid) }
-                                    )
-                                }
-                            }
+                    items(feedPosts) { post ->
+                        val authorProfile by produceState<UserProfile?>(initialValue = null, key1 = post.uid) {
+                            FirestoreService.getUserProfile(post.uid) { value = it }
                         }
-
-                        Text(post.title, style = MaterialTheme.typography.titleMedium)
-                        post.photoUrl?.let { url ->
-                            Image(
-                                painter = rememberAsyncImagePainter(url),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(120.dp)
-                                    .clip(MaterialTheme.shapes.medium)
-                            )
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            "⭐ ${post.rating}    📍 ${post.location ?: "-"}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray
+                        HomePostItem(
+                            post = post,
+                            authorProfile = authorProfile,
+                            onUserClick = onUserClick,
+                            onPostClick = onPostClick
                         )
                     }
                 }
             }
         }
+    }
+}
 
-        IconButton(
-            onClick = onNavigateToProfile,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(16.dp)
-        ) {
-            Icon(
-                Icons.Default.Person,
-                contentDescription = "Profile",
-                tint = MaterialTheme.colorScheme.onPrimary
-            )
-        }
+@Composable
+fun HomePostItem(
+    post: Post,
+    authorProfile: UserProfile?,
+    onUserClick: (String) -> Unit,
+    onPostClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = MaterialTheme.colorScheme
+    val displayImageUrl = post.photoUrls?.firstOrNull() ?: post.photoUrl
+    val painter = rememberAsyncImagePainter(model = displayImageUrl)
 
-        IconButton(
-            onClick = onNavigateToSearch,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(16.dp)
-                .size(56.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.secondary,
-                    shape = CircleShape
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(130.dp)
+            .clickable { onPostClick(post.postId) },
+        elevation = CardDefaults.cardElevation(4.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = colors.surface)
+    ) {
+        Row(Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                authorProfile?.profileImageUrl?.let {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(
+                            painter = rememberAsyncImagePainter(it),
+                            contentDescription = "Yazar fotoğrafı",
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .clickable { onUserClick(post.uid) }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = authorProfile.username,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colors.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.clickable { onUserClick(post.uid) }
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+                Text(
+                    text = post.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = colors.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-        ) {
-            Icon(
-                Icons.Default.Search,
-                contentDescription = "Search",
-                tint = MaterialTheme.colorScheme.onSecondary
-            )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = post.description.orEmpty(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurface.copy(alpha = 0.7f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "⭐ ${post.rating}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.primary
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .width(120.dp)
+                    .fillMaxHeight()
+                    .clip(MaterialTheme.shapes.small)
+            ) {
+                if (displayImageUrl != null) {
+                    Image(
+                        painter = painter,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(colors.onSurface.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Home,
+                            contentDescription = "placeholder",
+                            tint = colors.onSurface.copy(alpha = 0.3f)
+                        )
+                    }
+                }
+            }
         }
     }
 }

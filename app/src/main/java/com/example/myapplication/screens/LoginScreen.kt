@@ -8,9 +8,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
@@ -19,6 +16,7 @@ import androidx.compose.ui.unit.sp
 import com.example.myapplication.R
 import com.example.myapplication.firebase.AuthService
 import com.example.myapplication.ui.TextFieldStyles
+import com.example.myapplication.ui.theme.AppTheme
 
 @Composable
 fun LoginScreen(
@@ -33,23 +31,12 @@ fun LoginScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
 
-    // TextField renklerini, kendi TextFieldStyles sınıfınızla belirleyebilirsiniz
     val tfColors = TextFieldStyles.defaultTextFieldColors()
-
-    // Arka plan için kullanılacak degradeli boya (mavi → yeşil)
-    val backgroundGradient = Brush.linearGradient(
-        colors = listOf(
-            colorResource(id = R.color.blue_900),
-            colorResource(id = R.color.green_800)
-        ),
-        start = Offset(0f, 0f),
-        end = Offset(0f, Float.POSITIVE_INFINITY)
-    )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundGradient)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier
@@ -113,8 +100,8 @@ fun LoginScreen(
                     .height(50.dp),
                 shape = MaterialTheme.shapes.medium,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = colorResource(id = R.color.blue_800),
-                    contentColor = colorResource(id = R.color.blue_800)
+                    containerColor = colors.primary,
+                    contentColor = colors.onPrimary
                 )
             ) {
                 if (isLoading) {
@@ -138,7 +125,7 @@ fun LoginScreen(
             TextButton(onClick = onNavigateToRegister) {
                 Text(
                     text = stringResource(R.string.no_account_get_register),
-                    color = colorResource(R.color.yellow),
+                    color = colors.secondary,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -159,7 +146,7 @@ fun LoginScreen(
 @Preview(showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_NO)
 @Composable
 fun PreviewLoginScreen_Light() {
-    MaterialTheme {
+    AppTheme {
         LoginScreen(
             onLoginSuccess = {},
             onNavigateToRegister = {}
@@ -170,7 +157,7 @@ fun PreviewLoginScreen_Light() {
 @Preview(showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun PreviewLoginScreen_Dark() {
-    MaterialTheme {
+    AppTheme {
         LoginScreen(
             onLoginSuccess = {},
             onNavigateToRegister = {}

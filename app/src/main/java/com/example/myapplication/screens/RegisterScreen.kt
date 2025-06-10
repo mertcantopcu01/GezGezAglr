@@ -12,17 +12,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
@@ -30,6 +26,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,12 +36,20 @@ import com.example.myapplication.firebase.AuthService
 import com.example.myapplication.firebase.FirebaseStorageService
 import com.example.myapplication.firebase.FirestoreService
 import com.example.myapplication.ui.TextFieldStyles
+import com.example.myapplication.ui.theme.AppTheme
 
 @Composable
 fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
+    val context = LocalContext.current
+    val tfColors = TextFieldStyles.defaultTextFieldColors()
+    val FiftyDp = 60.dp
+
+    // Tema’dan gelen renk paleti:
+    val colors = MaterialTheme.colorScheme
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -54,10 +59,7 @@ fun RegisterScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
 
-    val context = LocalContext.current
-    val scrollState = rememberScrollState()
-    val tfColors = TextFieldStyles.defaultTextFieldColors()
-
+    // Fotoğraf seçme launcher’ları
     val openDocumentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { uri -> selectedImageUri = uri }
@@ -67,41 +69,27 @@ fun RegisterScreen(
         onResult = { uri -> selectedImageUri = uri }
     )
 
-    val isDarkTheme = isSystemInDarkTheme()
-    val backgroundGradientColors = listOf(
-        colorResource(id = R.color.blue_900),
-        colorResource(id = R.color.green_800)
-    )
-    val primaryColor = MaterialTheme.colorScheme.primary
-
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.linearGradient(
-                    colors = backgroundGradientColors,
-                    start = Offset(0f, 0f),
-                    end = Offset(0f, Float.POSITIVE_INFINITY)
-                )
-            )
+            // Tema’nın arka plan rengini kullanıyoruz (Dark modda siyaha yakın olacaktır)
+            .background(color = colors.background)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(horizontal = 24.dp, vertical = 16.dp),
+                .padding(horizontal = 16.dp), // Yatay padding biraz azaltıldı
+            verticalArrangement = Arrangement.SpaceEvenly, // Alanları eşit aralıkla dağıt
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Profil resmi seçimi için daire
+            // 1. Profil resmi alanı
             Box(
                 modifier = Modifier
-                    .size(100.dp)
+                    .size(80.dp) // 100dp → 80dp yapıldı
                     .clip(CircleShape)
                     .border(
                         width = 2.dp,
-                        color = Color.White,
+                        color = colors.onBackground.copy(alpha = 0.4f),
                         shape = CircleShape
                     )
                     .clickable {
@@ -130,101 +118,106 @@ fun RegisterScreen(
                         painter = painterResource(id = R.drawable.unknown_avatar),
                         contentDescription = "Default Avatar",
                         modifier = Modifier
-                            .size(60.dp)
+                            .size(50.dp)
                             .clip(CircleShape),
                         colorFilter = null
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            // 2. Email TextField
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
                 label = {
                     Text(
                         text = stringResource(R.string.email),
-                        color = Color.Gray
+                        color = colors.onSurface.copy(alpha = 0.6f)
                     )
                 },
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                colors = tfColors
+                    .height( FiftyDp ) , // sabit yükseklik
+                colors = tfColors,
+                textStyle = LocalTextStyle.current.copy(color = colors.onSurface)
             )
 
-            // Kullanıcı Adı
+            // 3. Kullanıcı Adı TextField
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
                 label = {
                     Text(
                         text = stringResource(R.string.user_id),
-                        color = Color.Gray
+                        color = colors.onSurface.copy(alpha = 0.6f)
                     )
                 },
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                colors = tfColors
+                    .height( FiftyDp ), // sabit yükseklik
+                colors = tfColors,
+                textStyle = LocalTextStyle.current.copy(color = colors.onSurface)
             )
 
-            // Bio Alanı
+            // 4. Bio TextField (tek satırlık olacak şekilde yüksekliği küçültüldü)
             OutlinedTextField(
                 value = bio,
                 onValueChange = { bio = it },
                 label = {
                     Text(
                         text = stringResource(R.string.bio),
-                        color = Color.Gray
+                        color = colors.onSurface.copy(alpha = 0.6f)
                     )
                 },
+                singleLine = false,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(80.dp)
-                    .padding(bottom = 12.dp),
-                colors = tfColors
+                    .height(60.dp), // 80dp → 60dp
+                colors = tfColors,
+                textStyle = LocalTextStyle.current.copy(color = colors.onSurface)
             )
 
-            // Şifre Alanı
+            // 5. Şifre TextField
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
                 label = {
                     Text(
                         text = stringResource(R.string.password),
-                        color = Color.Gray
+                        color = colors.onSurface.copy(alpha = 0.6f)
                     )
                 },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                colors = tfColors
+                    .height( FiftyDp ),
+                colors = tfColors,
+                textStyle = LocalTextStyle.current.copy(color = colors.onSurface)
             )
 
-            // Şifre (Tekrar) Alanı
+            // 6. Şifre (Tekrar) TextField
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it },
                 label = {
                     Text(
                         text = stringResource(R.string.password_again),
-                        color = Color.Gray
+                        color = colors.onSurface.copy(alpha = 0.6f)
                     )
                 },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                colors = tfColors
+                    .height( FiftyDp ),
+                colors = tfColors,
+                textStyle = LocalTextStyle.current.copy(color = colors.onSurface)
             )
 
-            // Kayıt Ol Butonu
+            // 7. Kayıt Ol Butonu
             Button(
                 onClick = {
                     // Şifre eşleşme kontrolü
@@ -267,17 +260,17 @@ fun RegisterScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp),
+                    .height( FiftyDp ),
                 enabled = !isLoading,
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = colorResource(id = R.color.blue_800),
-                    contentColor = colorResource(id = R.color.blue_800)
+                    containerColor = colors.primary,
+                    contentColor = colors.onPrimary
                 )
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
-                        color = Color.White,
+                        color = colors.onPrimary,
                         strokeWidth = 2.dp,
                         modifier = Modifier.size(20.dp)
                     )
@@ -285,20 +278,23 @@ fun RegisterScreen(
                     Text(
                         text = stringResource(R.string.register),
                         fontSize = 16.sp,
-                        color = Color.White
+                        color = colors.onPrimary
                     )
                 }
             }
 
-            // Hata Mesajı
-            errorMessage?.let {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = it, color = Color.Red, fontSize = 14.sp)
+            // 8. Hata Mesajı
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage!!,
+                    color = colors.error,
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // “Zaten hesabın var mı?” satırı
+            // 9. “Zaten hesabın var mı?” satırı
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
@@ -306,23 +302,12 @@ fun RegisterScreen(
                 TextButton(onClick = onNavigateToLogin) {
                     Text(
                         text = stringResource(R.string.already_have_account_register),
-                        color = colorResource(R.color.yellow),
+                        color = colors.secondary,
                         fontWeight = FontWeight.Bold,
                         fontSize = MaterialTheme.typography.bodyMedium.fontSize
                     )
                 }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewRegisterScreen() {
-    MaterialTheme {
-        RegisterScreen(
-            onRegisterSuccess = {},
-            onNavigateToLogin = {}
-        )
     }
 }

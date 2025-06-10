@@ -67,14 +67,18 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
 
 
         composable(Routes.CREATE_POST) {
-            CreatePostScreen(onPostCreated = { navController.popBackStack() })
+            CreatePostScreen(onPostCreated = { navController.popBackStack() },
+                onBack = { navController.popBackStack() },
+                )
         }
 
 
         composable(Routes.SEARCH) {
             SearchScreen(onUserSelected = { userId ->
                 navController.navigate("${Routes.USER_PROFILE}/$userId")
-            })
+            },
+                onBack = { navController.popBackStack() },
+            )
         }
 
 
@@ -98,7 +102,8 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
                             inclusive = true
                         }
                     }
-                }
+                },
+                onBack = { navController.popBackStack() },
             )
         }
 
@@ -110,7 +115,11 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
             })
         ) { backStack ->
             val postId = backStack.arguments!!.getString("postId")!!
-            PostDetailScreen(postId = postId)
+            PostDetailScreen(
+                postId = postId,
+                onBack = { navController.popBackStack() },
+
+            )
         }
 
         composable(

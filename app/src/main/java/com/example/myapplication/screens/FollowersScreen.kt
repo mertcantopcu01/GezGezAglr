@@ -1,12 +1,8 @@
 package com.example.myapplication.screens
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -16,16 +12,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
-import com.example.myapplication.R
 import com.example.myapplication.firebase.FirestoreService
 import com.example.myapplication.firebase.UserProfile
+import com.example.myapplication.ui.theme.AppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,87 +26,74 @@ fun FollowersScreen(
     onBack: () -> Unit,
     onUserClick: (String) -> Unit
 ) {
-    var list by remember { mutableStateOf<List<UserProfile>>(emptyList()) }
-    LaunchedEffect(userId) {
-        FirestoreService.getFollowersList(userId) { list = it }
-    }
+    AppTheme {
+        var followers by remember { mutableStateOf<List<UserProfile>>(emptyList()) }
+        LaunchedEffect(userId) {
+            FirestoreService.getFollowersList(userId) { followers = it }
+        }
 
-    // Degradeli arka plan renkleri (res/values/colors.xml içinde tanımlı olmalı)
-    val gradientColors = listOf(
-        colorResource(id = R.color.blue_900),
-        colorResource(id = R.color.green_800)
-    )
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Takipçiler", color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.Default.ArrowBack,
-                            contentDescription = "Geri",
-                            tint = Color.White
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                ),
-                modifier = Modifier.background(
-                    brush = Brush.linearGradient(
-                        colors = gradientColors,
-                        start = Offset(0f, 0f),
-                        end = Offset(0f, Float.POSITIVE_INFINITY)
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Takipçiler") },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = "Geri"
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.smallTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 )
-            )
-        },
-        // Scaffold'un kendi content parametresi içine Box + LazyColumn alıyoruz
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = gradientColors,
-                        start = Offset(0f, 0f),
-                        end = Offset(0f, Float.POSITIVE_INFINITY)
-                    )
-                )
-                .padding(paddingValues)
-        ) {
+            },
+            containerColor = MaterialTheme.colorScheme.background
+        ) { paddingValues ->
             LazyColumn(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                items(list) { u ->
+                items(followers) { user ->
                     ListItem(
                         modifier = Modifier
-                            .clickable { onUserClick(u.uid) }
+                            .fillMaxWidth()
+                            .clickable { onUserClick(user.uid) }
                             .padding(vertical = 4.dp),
-                        headlineContent = {
-                            Text(
-                                text = u.username,
-                                color = Color.White,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        },
                         leadingContent = {
                             Image(
-                                painter = rememberAsyncImagePainter(u.profileImageUrl ?: ""),
+                                painter = rememberAsyncImagePainter(user.profileImageUrl ?: ""),
                                 contentDescription = null,
                                 modifier = Modifier
-                                    .size(40.dp)
+                                    .size(48.dp)
                                     .clip(CircleShape)
                             )
                         },
+                        headlineContent = {
+                            Text(
+                                text = user.username,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        },
+                        supportingContent = {
+                            user.bio?.let {
+                                Text(
+                                    text = it,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                                )
+                            }
+                        },
                         colors = ListItemDefaults.colors(
-                            containerColor = Color.Transparent
+                            containerColor = MaterialTheme.colorScheme.surface
                         )
                     )
-                    Divider(color = Color.Transparent.copy(alpha = 0.5f))
+                    Divider()
                 }
             }
         }
@@ -125,86 +104,76 @@ fun FollowersScreen(
 @Preview(showBackground = true, widthDp = 360, heightDp = 640)
 @Composable
 fun PreviewFollowersScreen() {
-    // Örnek veri
-    val sampleUsers = listOf(
-        UserProfile(uid = "u1", username = "Ali", profileImageUrl = null, bio = null),
-        UserProfile(uid = "u2", username = "Ayşe", profileImageUrl = null, bio = null)
-    )
+    AppTheme {
+        // Sample data for preview
+        val sample = listOf(
+            UserProfile(uid = "1", username = "Ali", profileImageUrl = null, bio = "Merhaba!"),
+            UserProfile(uid = "2", username = "Ayşe", profileImageUrl = null, bio = "Kotlin geliştirici")
+        )
+        var followers by remember { mutableStateOf(sample) }
 
-    // “preview” için list değerini sabitleyelim:
-    var list by remember { mutableStateOf(sampleUsers) }
-
-    // Degradeli arka plan renkleri
-    val gradientColors = listOf(
-        colorResource(id = R.color.blue_900),
-        colorResource(id = R.color.green_800)
-    )
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Takipçiler", color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = { /* Geri */ }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Geri", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                ),
-                modifier = Modifier.background(
-                    brush = Brush.linearGradient(
-                        colors = gradientColors,
-                        start = Offset(0f, 0f),
-                        end = Offset(0f, Float.POSITIVE_INFINITY)
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Takipçiler") },
+                    navigationIcon = {
+                        IconButton(onClick = { }) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = "Geri"
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.smallTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 )
-            )
-        },
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = gradientColors,
-                        start = Offset(0f, 0f),
-                        end = Offset(0f, Float.POSITIVE_INFINITY)
-                    )
-                )
-                .padding(paddingValues)
-        ) {
+            },
+            containerColor = MaterialTheme.colorScheme.background
+        ) { paddingValues ->
             LazyColumn(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                items(list) { u ->
+                items(followers) { user ->
                     ListItem(
                         modifier = Modifier
-                            .clickable { /* Kullanıcıya git */ }
+                            .fillMaxWidth()
+                            .clickable { }
                             .padding(vertical = 4.dp),
-                        headlineContent = {
-                            Text(
-                                text = u.username,
-                                color = Color.White,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        },
                         leadingContent = {
                             Image(
-                                painter = rememberAsyncImagePainter(u.profileImageUrl ?: ""),
+                                painter = rememberAsyncImagePainter(null),
                                 contentDescription = null,
                                 modifier = Modifier
-                                    .size(40.dp)
+                                    .size(48.dp)
                                     .clip(CircleShape)
                             )
                         },
+                        headlineContent = {
+                            Text(
+                                text = user.username,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        },
+                        supportingContent = {
+                            user.bio?.let {
+                                Text(
+                                    text = it,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                                )
+                            }
+                        },
                         colors = ListItemDefaults.colors(
-                            containerColor = Color.Transparent
+                            containerColor = MaterialTheme.colorScheme.surface
                         )
                     )
-                    Divider(color = Color.Transparent.copy(alpha = 0.5f))
+                    HorizontalDivider()
                 }
             }
         }

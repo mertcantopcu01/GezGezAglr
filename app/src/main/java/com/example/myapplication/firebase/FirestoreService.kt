@@ -27,10 +27,11 @@ data class Post(
     val description: String = "",
     val rating: Int = 0,
     val photoUrl: String? = null,
+    var photoUrls: List<String>? = null,
     val location: String? = null,
     val timestamp: Long = System.currentTimeMillis(),
     val authorName: String = "",
-    val authorImageUrl: String? = null
+    val authorImageUrl: String? = null,
 )
 
 object FirestoreService {
@@ -121,20 +122,21 @@ object FirestoreService {
         title: String,
         description: String,
         rating: Int,
-        photoUrl: String?,
+        photoUrls: List<String>?,
         location: String?,
         onComplete: (Boolean) -> Unit
     ) {
         val currentUser = auth.currentUser ?: run {
-            onComplete(false); return
+            onComplete(false)
+            return
         }
         val data = hashMapOf(
-            "uid" to currentUser.uid,
-            "title" to title,
+            "uid"       to currentUser.uid,
+            "title"     to title,
             "description" to description,
-            "rating" to rating,
-            "photoUrl" to photoUrl,
-            "location" to location,
+            "rating"    to rating,
+            "photoUrls" to photoUrls,
+            "location"  to location,
             "timestamp" to System.currentTimeMillis()
         )
         db.collection("posts")
@@ -142,6 +144,7 @@ object FirestoreService {
             .addOnSuccessListener { onComplete(true) }
             .addOnFailureListener { onComplete(false) }
     }
+
 
     fun searchUsers(query: String, onResult: (List<UserProfile>) -> Unit) {
         Firebase.firestore.collection("users")
