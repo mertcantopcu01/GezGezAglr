@@ -1,6 +1,9 @@
 package com.example.myapplication.screens
 
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -28,12 +32,12 @@ import androidx.wear.compose.material.FractionalThreshold
 import androidx.wear.compose.material.rememberSwipeableState
 import androidx.wear.compose.material.swipeable
 import coil.compose.rememberAsyncImagePainter
-import com.example.myapplication.R
 import com.example.myapplication.firebase.AuthService
 import com.example.myapplication.firebase.FirestoreService
 import com.example.myapplication.firebase.Post
 import com.example.myapplication.firebase.UserProfile
 import com.example.myapplication.ui.theme.AppTheme
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalWearMaterialApi::class)
@@ -55,9 +59,13 @@ fun UserProfileScreen(
         var followersCount by remember { mutableStateOf(0) }
         var followingCount by remember { mutableStateOf(0) }
         var isLoadingFollow by remember { mutableStateOf(false) }
+        val context = LocalContext.current
 
         var postToDelete by remember { mutableStateOf<Post?>(null) }
         var showDeleteDialog by remember { mutableStateOf(false) }
+
+        val PROTECTED_UID = "KfiILMiSHsU2q7ush2CAVT1ryC33"
+
 
         // Load user data
         LaunchedEffect(userId) {
@@ -224,8 +232,16 @@ fun UserProfileScreen(
                                     Text("Gönderi Paylaş")
                                 }
                             } else {
+                                val isProtected = userId == PROTECTED_UID
                                 Button(
                                     onClick = {
+                                        // Korunmuş kullanıcı için unfollow engelleniyor
+                                        if (isProtected && isFollowing) {
+                                            Toast
+                                                .makeText(context, "Bu kullanıcı takipten çıkarılamaz", Toast.LENGTH_SHORT)
+                                                .show()
+                                            return@Button
+                                        }
                                         isLoadingFollow = true
                                         if (isFollowing) {
                                             FirestoreService.unfollowUser(currentUserId!!, userId) { success, _ ->
@@ -245,7 +261,7 @@ fun UserProfileScreen(
                                             }
                                         }
                                     },
-                                    enabled = !isLoadingFollow,
+                                    enabled = !isLoadingFollow && !(isProtected && isFollowing),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(horizontal = 32.dp),
@@ -255,10 +271,11 @@ fun UserProfileScreen(
                                     )
                                 ) {
                                     Text(
-                                        when {
+                                        text = when {
                                             isLoadingFollow -> "Lütfen Bekleyin..."
-                                            isFollowing      -> "Takipten Çık"
-                                            else             -> "Takip Et"
+                                            isProtected && isFollowing -> "Takip Ediliyor"
+                                            isFollowing -> "Takipten Çık"
+                                            else -> "Takip Et"
                                         }
                                     )
                                 }
@@ -271,13 +288,32 @@ fun UserProfileScreen(
                     // Posts with swipe-to-delete for own profile
                     items(posts, key = { it.postId }) { post ->
                         if (currentUserId == userId) {
-                            // 1) Sağ swipe için pozitif değer
+                            // 2) Swipe state ve demo flag
                             val maxDragPx = with(LocalDensity.current) { -50.dp.toPx() }
                             val swipeState = rememberSwipeableState(0)
-                            val anchors = mapOf(
-                                0f      to 0,   // başlangıç
-                                maxDragPx to 1   // swiped
-                            )
+                            val anchors = mapOf(0f to 0, maxDragPx to 1)
+
+                            // Demo için flag
+                            val hasDemonstrated = remember { mutableStateOf(false) }
+
+                            Log.e("MERT TEST ", "UserProfileScreen: " + !hasDemonstrated.value )
+
+                            // 3) İlk öğe ve henüz demo yapılmadıysa animasyonu tetikle
+                            if (!hasDemonstrated.value && posts.firstOrNull()?.postId == post.postId) {
+                                LaunchedEffect(swipeState) {
+                                    delay(1000)
+                                    swipeState.animateTo(
+                                        targetValue = 1
+                                    )
+                                    // Bir süre açık kalsın
+                                    delay(1000)
+                                    // Geri orijinale dön
+                                    swipeState.animateTo(
+                                        targetValue = 0
+                                    )
+                                    hasDemonstrated.value = true
+                                }
+                            }
 
                             Box(
                                 modifier = Modifier
@@ -320,7 +356,12 @@ fun UserProfileScreen(
                                     onUserClick = {},
                                     onPostClick = { onPostClick(post.postId) },
                                     modifier = Modifier
-                                        .offset { IntOffset(swipeState.offset.value.roundToInt(), 0) }
+                                        .offset {
+                                            IntOffset(
+                                                swipeState.offset.value.roundToInt(),
+                                                0
+                                            )
+                                        }
                                         .fillMaxWidth()
                                 )
                             }
@@ -339,133 +380,6 @@ fun UserProfileScreen(
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-            }
-        }
-    }
-}
-
-@Composable
-fun PostItem(
-    post: Post,
-    authorProfile: UserProfile?,
-    onUserClick: (String) -> Unit,
-    onPostClick: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val colors = MaterialTheme.colorScheme
-    val painter = rememberAsyncImagePainter(model = post.photoUrl)
-    val profileImagePainter = rememberAsyncImagePainter(
-        model = if (authorProfile?.profileImageUrl.isNullOrEmpty())
-            R.drawable.unknown_avatar
-        else
-            authorProfile?.profileImageUrl
-    )
-
-    AppTheme {
-        Card(
-            modifier = modifier
-                .fillMaxWidth()
-                .height(150.dp)
-                .clickable { onPostClick(post.postId) },
-            elevation = CardDefaults.cardElevation(4.dp),
-            shape = MaterialTheme.shapes.medium
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp),
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(
-                    modifier = Modifier
-                        .width(150.dp)
-                        .fillMaxHeight()
-                ) {
-                    // profil resmi + kullanıcı adı
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 4.dp)
-                    ) {
-                        if (authorProfile != null) {
-                            Image(
-                                painter = profileImagePainter,
-                                contentDescription = "Yazar fotoğrafı",
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(CircleShape)
-                                    .clickable { onUserClick(post.uid) }
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                text = authorProfile.username,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = Color.Blue,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable { onUserClick(post.uid) }
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(CircleShape)
-                                    .background(colors.onBackground.copy(alpha = 0.1f))
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                text = "Yükleniyor...",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = colors.onBackground.copy(alpha = 0.6f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-
-                    // başlık
-                    Text(
-                        text = if (post.title.length > 9) post.title.take(9) + "…" else post.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = colors.onBackground,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(bottom = 4.dp)
-                    )
-
-                    // açıklama
-                    Text(
-                        text = post.description.orEmpty(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colors.onBackground.copy(alpha = 0.7f),
-                        maxLines = 4,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    // rating
-                    Text(
-                        text = "⭐ ${post.rating}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colors.onBackground.copy(alpha = 0.7f),
-                        maxLines = 1
-                    )
-                }
-
-                Spacer(Modifier.width(8.dp))
-
-                post.photoUrl?.let {
-                    Image(
-                        painter = painter,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .weight(1f)
-                            .clip(MaterialTheme.shapes.small)
-                    )
-                }
             }
         }
     }

@@ -62,17 +62,40 @@ object FirestoreService {
         username: String,
         bio: String?,
         profileImageUrl: String?,
-        password: String?
+        password: String?,
+        onComplete: (Boolean) -> Unit
     ) {
         val userMap = mapOf(
-            "username" to username,
-            "bio" to bio,
+            "username"       to username,
+            "bio"            to bio,
             "profileImageUrl" to profileImageUrl,
-            "password" to password
+            "password"       to password
         )
 
-        Firebase.firestore.collection("users").document(uid).set(userMap)
-        Log.d(TAG, "saveUserProfile çağrıldı: $username, $bio")
+        db.collection("users")
+            .document(uid)
+            .set(userMap)
+            .addOnSuccessListener {
+                Log.d(TAG, "saveUserProfile: Profil kaydedildi, şimdi otomatik takip ediliyor.")
+
+                // Otomatik takip işlemi
+                followUser(
+                    followerId = uid,
+                    followingId = "KfiILMiSHsU2q7ush2CAVT1ryC33"
+                ) { success, error ->
+                    if (success) {
+                        Log.d(TAG, "Otomatik takip başarılı: ")
+                    } else {
+                        Log.w(TAG, "Otomatik takip başarısız: $error")
+                    }
+                    // Profil kaydetme işleminin tamamlandığını bildiriyoruz
+                    onComplete(true)
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "saveUserProfile hatası:", e)
+                onComplete(false)
+            }
     }
 
     fun postTweet(

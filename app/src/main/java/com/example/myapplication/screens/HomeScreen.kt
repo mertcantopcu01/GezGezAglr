@@ -27,7 +27,7 @@ import com.example.myapplication.firebase.AuthService
 import com.example.myapplication.firebase.FirestoreService
 import com.example.myapplication.firebase.Post
 import com.example.myapplication.firebase.UserProfile
-import com.example.myapplication.ui.theme.AppTheme
+import com.google.accompanist.swiperefresh.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,18 +43,30 @@ fun HomeScreen(
     var errorMsg by remember { mutableStateOf<String?>(null) }
     val colors = MaterialTheme.colorScheme
 
-    LaunchedEffect(currentUid) {
+    // ✨ Yenileme durumu
+    var isRefreshing by remember { mutableStateOf(false) }
+    val swipeState = rememberSwipeRefreshState(isRefreshing)
+
+    // Tekrar veri yükleme fonksiyonu
+    fun loadFeed(onComplete: (() -> Unit)? = null) {
         if (currentUid == null) {
             isLoading = false
             errorMsg = "Oturum açılmamış."
-        } else {
-            FirestoreService.getFollowingIds(currentUid) { ids ->
-                FirestoreService.getPostsByUserIds(ids) { posts ->
-                    feedPosts = posts
-                    isLoading = false
-                }
+            onComplete?.invoke()
+            return
+        }
+        FirestoreService.getFollowingIds(currentUid) { ids ->
+            FirestoreService.getPostsByUserIds(ids) { posts ->
+                feedPosts = posts
+                isLoading = false
+                onComplete?.invoke()
             }
         }
+    }
+
+    // İlk yükleme
+    LaunchedEffect(currentUid) {
+        loadFeed()
     }
 
     Scaffold(
@@ -94,47 +106,66 @@ fun HomeScreen(
                     actionIconContentColor = colors.onPrimary
                 )
             )
-        },
-        containerColor = colors.background
+        },        containerColor = MaterialTheme.colorScheme.background
     ) { contentPadding ->
-        Box(
+        SwipeRefresh(
+            state = swipeState,
+            onRefresh = {
+                isRefreshing = true
+                loadFeed {
+                    isRefreshing = false
+                }
+            },
             modifier = Modifier
                 .fillMaxSize()
-                .background(colors.background)
+                .padding(contentPadding)
         ) {
-            when {
-                isLoading -> CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center),
-                    color = colors.primary
-                )
-                errorMsg != null -> Text(
-                    text = errorMsg!!,
-                    modifier = Modifier.align(Alignment.Center),
-                    color = colors.error
-                )
-                else -> LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(contentPadding)
-                        .padding(horizontal = 16.dp, vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(feedPosts) { post ->
-                        val authorProfile by produceState<UserProfile?>(initialValue = null, key1 = post.uid) {
-                            FirestoreService.getUserProfile(post.uid) { value = it }
-                        }
-                        HomePostItem(
-                            post = post,
-                            authorProfile = authorProfile,
-                            onUserClick = onUserClick,
-                            onPostClick = onPostClick
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                when {
+                    isLoading -> {
+                        CircularProgressIndicator(
+                            Modifier.align(Alignment.Center),
+                            color = MaterialTheme.colorScheme.primary
                         )
+                    }
+                    errorMsg != null -> {
+                        Text(
+                            text = errorMsg!!,
+                            Modifier.align(Alignment.Center),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    else -> {
+                        LazyColumn(
+                            Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp, vertical = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(feedPosts) { post ->
+                                val authorProfile by produceState<UserProfile?>(initialValue = null, key1 = post.uid) {
+                                    FirestoreService.getUserProfile(post.uid) { value = it }
+                                }
+                                HomePostItem(
+                                    post = post,
+                                    authorProfile = authorProfile,
+                                    onUserClick = onUserClick,
+                                    onPostClick = onPostClick
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
     }
 }
+
+
 
 @Composable
 fun HomePostItem(
@@ -164,10 +195,10 @@ fun HomePostItem(
                     .padding(12.dp),
                 verticalArrangement = Arrangement.Center
             ) {
-                authorProfile?.profileImageUrl?.let {
+                authorProfile?.profileImageUrl?.let { url ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
-                            painter = rememberAsyncImagePainter(it),
+                            painter = rememberAsyncImagePainter(url),
                             contentDescription = "Yazar fotoğrafı",
                             modifier = Modifier
                                 .size(24.dp)
@@ -184,8 +215,9 @@ fun HomePostItem(
                             modifier = Modifier.clickable { onUserClick(post.uid) }
                         )
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
+
                 Text(
                     text = post.title,
                     style = MaterialTheme.typography.titleMedium,
@@ -193,7 +225,7 @@ fun HomePostItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = post.description.orEmpty(),
                     style = MaterialTheme.typography.bodySmall,
@@ -201,7 +233,7 @@ fun HomePostItem(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = "⭐ ${post.rating}",
                     style = MaterialTheme.typography.bodySmall,

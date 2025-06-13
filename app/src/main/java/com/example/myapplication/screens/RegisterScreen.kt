@@ -245,14 +245,38 @@ fun RegisterScreen(
                                     isLoading = false
                                     errorMessage = "Resim yüklenirken bir hata oluştu."
                                 } else {
-                                    FirestoreService.saveUserProfile(uid, username, bio, imageUrl, password)
-                                    isLoading = false
-                                    onRegisterSuccess()
+                                    FirestoreService.saveUserProfile(
+                                        uid = uid,
+                                        username = username,
+                                        bio = bio,
+                                        profileImageUrl = imageUrl,
+                                        password = password
+                                    ) { success ->
+                                        isLoading = false
+                                        if (success) {
+                                            onRegisterSuccess()
+                                        } else {
+                                            errorMessage = "Profil kaydedilirken bir hata oluştu."
+                                        }
+                                    }
                                 }
                             }
                         } ?: run {
                             // Resim yoksa sadece profili kaydet
-                            FirestoreService.saveUserProfile(uid, username, bio, null, password)
+                            FirestoreService.saveUserProfile(
+                                uid = uid,
+                                username = username,
+                                bio = bio,
+                                profileImageUrl = null,
+                                password = password
+                            ) { success ->
+                                isLoading = false
+                                if (success) {
+                                    onRegisterSuccess()
+                                } else {
+                                    errorMessage = "Profil kaydedilirken bir hata oluştu."
+                                }
+                            }
                             isLoading = false
                             onRegisterSuccess()
                         }

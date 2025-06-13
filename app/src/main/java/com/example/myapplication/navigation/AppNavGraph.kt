@@ -60,8 +60,8 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
 
         composable(Routes.REGISTER) {
             RegisterScreen(
-                onRegisterSuccess = { navController.popBackStack() },
-                onNavigateToLogin = { navController.popBackStack() }
+                onRegisterSuccess = { navController.navigate(Routes.HOME) },
+                onNavigateToLogin = { navController.navigate(Routes.HOME) }
             )
         }
 
