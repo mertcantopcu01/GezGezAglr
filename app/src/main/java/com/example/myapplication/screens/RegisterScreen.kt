@@ -1,4 +1,3 @@
-// RegisterScreen.kt
 package com.example.myapplication.screens
 
 import android.net.Uri
@@ -7,7 +6,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -21,15 +19,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,12 +35,18 @@ import com.example.myapplication.firebase.AuthService
 import com.example.myapplication.firebase.FirebaseStorageService
 import com.example.myapplication.firebase.FirestoreService
 import com.example.myapplication.ui.TextFieldStyles
+import com.example.myapplication.ui.AppBackground
+import androidx.compose.ui.platform.LocalContext
+
 
 @Composable
 fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
+    val isDark = isSystemInDarkTheme()
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -53,11 +55,15 @@ fun RegisterScreen(
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+    var showPw by remember { mutableStateOf(false) }
+    var showPw2 by remember { mutableStateOf(false) }
 
-    val context = LocalContext.current
-    val scrollState = rememberScrollState()
+
     val tfColors = TextFieldStyles.defaultTextFieldColors()
+    val scroll = rememberScrollState()
+    val context = LocalContext.current
 
+    // Görsel seçiciler
     val openDocumentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { uri -> selectedImageUri = uri }
@@ -67,249 +73,235 @@ fun RegisterScreen(
         onResult = { uri -> selectedImageUri = uri }
     )
 
-    val isDarkTheme = isSystemInDarkTheme()
-    val backgroundGradientColors = listOf(
-        colorResource(id = R.color.blue_900),
-        colorResource(id = R.color.green_800)
-    )
-    val primaryColor = MaterialTheme.colorScheme.primary
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                brush = Brush.linearGradient(
-                    colors = backgroundGradientColors,
-                    start = Offset(0f, 0f),
-                    end = Offset(0f, Float.POSITIVE_INFINITY)
-                )
-            )
-    ) {
-        Column(
+    AppBackground {
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(20.dp)
         ) {
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Profil resmi seçimi için daire
-            Box(
+            // Üst başlık
+            Text(
+                text = "GezGezAglr",
+                style = TextStyle(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 24.sp,
+                    color = if (isDark) Color.White else Color(0xFF0A2742)
+                ),
                 modifier = Modifier
-                    .size(100.dp)
-                    .clip(CircleShape)
-                    .border(
-                        width = 2.dp,
-                        color = Color.White,
-                        shape = CircleShape
+                    .align(Alignment.TopCenter)
+                    .padding(top = 24.dp)
+            )
+
+            // Kart
+            Card(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = cs.surface // Light: beyaz, Dark: nötr gri
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
+                shape = RoundedCornerShape(22.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .verticalScroll(scroll)
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Kaydol",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = cs.onSurface,
+                        fontFamily = FontFamily.Monospace
                     )
-                    .clickable {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            pickMediaLauncher.launch(
-                                PickVisualMediaRequest(
-                                    ActivityResultContracts.PickVisualMedia.ImageOnly
-                                )
+
+                    Spacer(Modifier.height(18.dp))
+
+                    // Profil resmi
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, cs.primary.copy(alpha = 0.8f), CircleShape)
+                            .clickable {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    pickMediaLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                } else openDocumentLauncher.launch(arrayOf("image/*"))
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (selectedImageUri != null) {
+                            Image(
+                                painter = rememberAsyncImagePainter(selectedImageUri),
+                                contentDescription = "Selected",
+                                modifier = Modifier.fillMaxSize().clip(CircleShape)
                             )
                         } else {
-                            openDocumentLauncher.launch(arrayOf("image/*"))
+                            Image(
+                                painter = painterResource(id = R.drawable.unknown_avatar),
+                                contentDescription = "Default",
+                                modifier = Modifier.size(60.dp).clip(CircleShape)
+                            )
                         }
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                if (selectedImageUri != null) {
-                    Image(
-                        painter = rememberAsyncImagePainter(selectedImageUri),
-                        contentDescription = "Selected Profile Image",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                    )
-                } else {
-                    Image(
-                        painter = painterResource(id = R.drawable.unknown_avatar),
-                        contentDescription = "Default Avatar",
-                        modifier = Modifier
-                            .size(60.dp)
-                            .clip(CircleShape),
-                        colorFilter = null
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = {
-                    Text(
-                        text = stringResource(R.string.email),
-                        color = Color.Gray
-                    )
-                },
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                colors = tfColors
-            )
-
-            // Kullanıcı Adı
-            OutlinedTextField(
-                value = username,
-                onValueChange = { username = it },
-                label = {
-                    Text(
-                        text = stringResource(R.string.user_id),
-                        color = Color.Gray
-                    )
-                },
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                colors = tfColors
-            )
-
-            // Bio Alanı
-            OutlinedTextField(
-                value = bio,
-                onValueChange = { bio = it },
-                label = {
-                    Text(
-                        text = stringResource(R.string.bio),
-                        color = Color.Gray
-                    )
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp)
-                    .padding(bottom = 12.dp),
-                colors = tfColors
-            )
-
-            // Şifre Alanı
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = {
-                    Text(
-                        text = stringResource(R.string.password),
-                        color = Color.Gray
-                    )
-                },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                colors = tfColors
-            )
-
-            // Şifre (Tekrar) Alanı
-            OutlinedTextField(
-                value = confirmPassword,
-                onValueChange = { confirmPassword = it },
-                label = {
-                    Text(
-                        text = stringResource(R.string.password_again),
-                        color = Color.Gray
-                    )
-                },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                colors = tfColors
-            )
-
-            // Kayıt Ol Butonu
-            Button(
-                onClick = {
-                    // Şifre eşleşme kontrolü
-                    if (password != confirmPassword) {
-                        errorMessage = context.getString(R.string.passwords_dont_match)
-                        return@Button
                     }
-                    isLoading = true
-                    AuthService.registerUser(email, password) { success, error ->
-                        if (!success) {
-                            isLoading = false
-                            errorMessage = error
-                            return@registerUser
+
+                    Spacer(Modifier.height(20.dp))
+
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it; errorMessage = null },
+                        label = { Text("E-posta", color = cs.onSurface.copy(alpha = 0.6f)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = tfColors
+                    )
+                    Spacer(Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = username,
+                        onValueChange = { username = it; errorMessage = null },
+                        label = { Text("Kullanıcı adı", color = cs.onSurface.copy(alpha = 0.6f)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = tfColors
+                    )
+                    Spacer(Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = bio,
+                        onValueChange = { bio = it; errorMessage = null },
+                        label = { Text("Bio", color = cs.onSurface.copy(alpha = 0.6f)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(90.dp),
+                        colors = tfColors
+                    )
+                    Spacer(Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it; errorMessage = null },
+                        label = { Text("Şifre", color = cs.onSurface.copy(alpha = 0.6f)) },
+                        singleLine = true,
+                        visualTransformation = if (showPw) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            TextButton(
+                                onClick = { showPw = !showPw },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                            ) { Text(if (showPw) "Gizle" else "Göster") }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = tfColors
+                    )
+                    Spacer(Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it; errorMessage = null },
+                        label = { Text("Şifre (tekrar)", color = cs.onSurface.copy(alpha = 0.6f)) },
+                        singleLine = true,
+                        visualTransformation = if (showPw2) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            TextButton(
+                                onClick = { showPw2 = !showPw2 },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                            ) { Text(if (showPw2) "Gizle" else "Göster") }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = tfColors
+                    )
+
+                    if (!errorMessage.isNullOrBlank()) {
+                        Spacer(Modifier.height(10.dp))
+                        Surface(
+                            color = cs.errorContainer,
+                            contentColor = cs.onErrorContainer,
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Text(
+                                text = errorMessage!!,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
                         }
-                        val uid = AuthService.getCurrentUser()?.uid
-                        if (uid == null) {
-                            isLoading = false
-                            errorMessage = "Kullanıcı oluşturulamadı."
-                            return@registerUser
-                        }
-                        // Resim yükleme
-                        selectedImageUri?.let { uri ->
-                            FirebaseStorageService.uploadImage(context, uri) { imageUrl ->
-                                if (imageUrl == null) {
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Button(
+                        onClick = {
+                            if (password != confirmPassword) {
+                                errorMessage = "Şifreler eşleşmiyor."
+                                return@Button
+                            }
+                            isLoading = true
+                            AuthService.registerUser(email, password) { success, error ->
+                                if (!success) {
                                     isLoading = false
-                                    errorMessage = "Resim yüklenirken bir hata oluştu."
-                                } else {
-                                    FirestoreService.saveUserProfile(uid, username, bio, imageUrl, password)
+                                    errorMessage = error
+                                    return@registerUser
+                                }
+                                val uid = AuthService.getCurrentUser()?.uid
+                                if (uid == null) {
+                                    isLoading = false
+                                    errorMessage = "Kullanıcı oluşturulamadı."
+                                    return@registerUser
+                                }
+                                selectedImageUri?.let { uri ->
+                                    FirebaseStorageService.uploadImage(context, uri) { imageUrl ->
+                                        if (imageUrl == null) {
+                                            isLoading = false
+                                            errorMessage = "Resim yüklenirken bir hata oluştu."
+                                        } else {
+                                            FirestoreService.saveUserProfile(uid, username, bio, imageUrl, password)
+                                            isLoading = false
+                                            onRegisterSuccess()
+                                        }
+                                    }
+                                } ?: run {
+                                    FirestoreService.saveUserProfile(uid, username, bio, null, password)
                                     isLoading = false
                                     onRegisterSuccess()
                                 }
                             }
-                        } ?: run {
-                            // Resim yoksa sadece profili kaydet
-                            FirestoreService.saveUserProfile(uid, username, bio, null, password)
-                            isLoading = false
-                            onRegisterSuccess()
+                        },
+                        enabled = !isLoading && email.isNotBlank() && username.isNotBlank() && password.length >= 6,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = MaterialTheme.shapes.medium,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = cs.primary,
+                            contentColor = cs.onPrimary,
+                            disabledContainerColor = cs.primary.copy(alpha = 0.4f),
+                            disabledContentColor = cs.onPrimary.copy(alpha = 0.7f)
+                        )
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                color = cs.onPrimary,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        } else {
+                            Text("Kaydol", fontSize = 16.sp, fontFamily = FontFamily.Monospace)
                         }
                     }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                enabled = !isLoading,
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = colorResource(id = R.color.blue_800),
-                    contentColor = colorResource(id = R.color.blue_800)
-                )
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        color = Color.White,
-                        strokeWidth = 2.dp,
-                        modifier = Modifier.size(20.dp)
-                    )
-                } else {
-                    Text(
-                        text = stringResource(R.string.register),
-                        fontSize = 16.sp,
-                        color = Color.White
-                    )
-                }
-            }
 
-            // Hata Mesajı
-            errorMessage?.let {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = it, color = Color.Red, fontSize = 14.sp)
-            }
+                    Spacer(Modifier.height(12.dp))
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // “Zaten hesabın var mı?” satırı
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                TextButton(onClick = onNavigateToLogin) {
-                    Text(
-                        text = stringResource(R.string.already_have_account_register),
-                        color = colorResource(R.color.yellow),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = MaterialTheme.typography.bodyMedium.fontSize
-                    )
+                    TextButton(onClick = onNavigateToLogin) {
+                        Text(
+                            text = "Zaten hesabın var mı? Giriş yap",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }
@@ -319,10 +311,5 @@ fun RegisterScreen(
 @Preview(showBackground = true)
 @Composable
 fun PreviewRegisterScreen() {
-    MaterialTheme {
-        RegisterScreen(
-            onRegisterSuccess = {},
-            onNavigateToLogin = {}
-        )
-    }
+    MaterialTheme { RegisterScreen(onRegisterSuccess = {}, onNavigateToLogin = {}) }
 }
