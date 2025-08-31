@@ -27,6 +27,7 @@ import coil.request.ImageRequest
 import com.example.myapplication.firebase.FirestoreService
 import com.example.myapplication.firebase.Post
 import com.example.myapplication.ui.AppBackground
+import com.example.myapplication.ui.AppThemeColors   // <-- EKLENDİ
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,16 +52,13 @@ fun PostDetailScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-
                     navigationIcon = {
-                        onBack?.let {
-                            IconButton(onClick = it) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Geri",
-                                    tint = cs.onPrimary,
-                                )
-                            }
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Geri",
+                                tint = AppThemeColors.extra.onTopBar
+                            )
                         }
                     },
                     title = {
@@ -68,14 +66,14 @@ fun PostDetailScreen(
                             post?.title?.takeIf { it.isNotBlank() } ?: "Gönderi",
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            color = cs.onPrimary,
+                            color = AppThemeColors.extra.onTopBar,
                             fontFamily = FontFamily.Monospace
                         )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = cs.primary,
-                        titleContentColor = cs.onPrimary,
-                        navigationIconContentColor = cs.onPrimary
+                        containerColor = AppThemeColors.extra.topBar,      // <-- primary yerine burası
+                        titleContentColor = AppThemeColors.extra.onTopBar,  // metin rengi
+                        navigationIconContentColor = AppThemeColors.extra.onTopBar
                     )
                 )
             },

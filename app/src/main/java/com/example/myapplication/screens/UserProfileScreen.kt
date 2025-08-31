@@ -41,10 +41,11 @@ import com.example.myapplication.firebase.FirestoreService
 import com.example.myapplication.firebase.Post
 import com.example.myapplication.firebase.UserProfile
 import com.example.myapplication.ui.AppBackground
+import com.example.myapplication.ui.AppThemeColors
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
-// Yalnızca iki durum: kapalı ve 24dp reveal
+// Swipeable kartın 2 hali
 enum class CardPos { Closed, Revealed }
 
 @OptIn(
@@ -74,18 +75,16 @@ fun UserProfileScreen(
 
     var postToDelete by remember { mutableStateOf<Post?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
-
-    // İlk girişte sadece bir kere peek
     var hasPeeked by rememberSaveable(userId) { mutableStateOf(false) }
 
+    // Veri yükle
     LaunchedEffect(userId) {
-        FirestoreService.getUserProfile(userId)    { profile = it }
-        FirestoreService.getUserPosts(userId)      { posts = it }
+        FirestoreService.getUserProfile(userId) { profile = it }
+        FirestoreService.getUserPosts(userId) { posts = it }
         FirestoreService.getFollowersCount(userId) { followersCount = it }
         FirestoreService.getFollowingCount(userId) { followingCount = it }
-        val me = currentUserId
-        if (me != null && me != userId) {
-            FirestoreService.isFollowing(me, userId) { isFollowing = it }
+        if (currentUserId != null && currentUserId != userId) {
+            FirestoreService.isFollowing(currentUserId, userId) { isFollowing = it }
         }
     }
 
@@ -107,9 +106,7 @@ fun UserProfileScreen(
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) { Text("Hayır", color = cs.primary) }
             },
-            containerColor = cs.surface,
-            titleContentColor = cs.onSurface,
-            textContentColor = cs.onSurface
+            containerColor = cs.surface
         )
     }
 
@@ -122,7 +119,7 @@ fun UserProfileScreen(
                             profile?.username ?: "Profil",
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.SemiBold,
-                            color = cs.onPrimary
+                            color = AppThemeColors.extra.onTopBar
                         )
                     },
                     navigationIcon = {
@@ -131,7 +128,7 @@ fun UserProfileScreen(
                                 Icon(
                                     Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Geri",
-                                    tint = cs.onPrimary
+                                    tint = AppThemeColors.extra.onTopBar
                                 )
                             }
                         }
@@ -142,30 +139,23 @@ fun UserProfileScreen(
                                 AuthService.signOut()
                                 onLogout()
                             }) {
-                                Icon(Icons.Filled.ExitToApp, contentDescription = "Çıkış", tint = cs.onPrimary)
+                                Icon(Icons.Filled.ExitToApp, contentDescription = "Çıkış", tint = AppThemeColors.extra.onTopBar)
                             }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = cs.primary,
-                        titleContentColor = cs.onPrimary,
-                        navigationIconContentColor = cs.onPrimary,
-                        actionIconContentColor = cs.onPrimary
+                        containerColor = AppThemeColors.extra.topBar,
+                        titleContentColor = AppThemeColors.extra.onTopBar,
+                        navigationIconContentColor = AppThemeColors.extra.onTopBar,
+                        actionIconContentColor = AppThemeColors.extra.onTopBar
                     )
                 )
             },
             containerColor = cs.background
         ) { padding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-            ) {
+            Box(Modifier.fillMaxSize().padding(padding)) {
                 if (profile == null) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                        color = cs.primary
-                    )
+                    CircularProgressIndicator(Modifier.align(Alignment.Center), color = cs.primary)
                 } else {
                     LazyColumn(
                         modifier = Modifier
@@ -175,166 +165,24 @@ fun UserProfileScreen(
                     ) {
                         // HEADER
                         item {
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = cs.surface),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                                shape = MaterialTheme.shapes.large
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    SubcomposeAsyncImage(
-                                        model = ImageRequest.Builder(ctx)
-                                            .data(profile!!.profileImageUrl)
-                                            .crossfade(true)
-                                            .build(),
-                                        contentDescription = "Avatar",
-                                        contentScale = ContentScale.Crop,
-                                        loading = {
-                                            Box(
-                                                Modifier
-                                                    .size(96.dp)
-                                                    .clip(CircleShape)
-                                                    .background(cs.secondary.copy(alpha = 0.2f))
-                                            )
-                                        },
-                                        error = {
-                                            Box(
-                                                Modifier
-                                                    .size(96.dp)
-                                                    .clip(CircleShape)
-                                                    .background(cs.secondary.copy(alpha = 0.2f))
-                                            )
-                                        },
-                                        modifier = Modifier
-                                            .size(96.dp)
-                                            .clip(CircleShape)
-                                    )
-
-                                    Spacer(Modifier.height(10.dp))
-
-                                    Text(
-                                        profile!!.username,
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontFamily = FontFamily.Monospace,
-                                        color = cs.onSurface
-                                    )
-
-                                    profile!!.bio?.takeIf { it.isNotBlank() }?.let {
-                                        Spacer(Modifier.height(6.dp))
-                                        Text(
-                                            it,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = cs.onSurface.copy(alpha = 0.8f)
-                                        )
-                                    }
-
-                                    Spacer(Modifier.height(12.dp))
-
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceEvenly
-                                    ) {
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            modifier = Modifier
-                                                .padding(8.dp)
-                                                .clickable(onClick = { onFollowersClick(userId) })
-                                        ) {
-                                            Text(
-                                                "$followersCount",
-                                                style = MaterialTheme.typography.titleMedium,
-                                                fontFamily = FontFamily.Monospace,
-                                                color = cs.onSurface
-                                            )
-                                            Text("Takipçi", style = MaterialTheme.typography.bodySmall, color = cs.onSurface.copy(0.7f))
-                                        }
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            modifier = Modifier
-                                                .padding(8.dp)
-                                                .clickable(onClick = { onFollowingClick(userId) })
-                                        ) {
-                                            Text(
-                                                "$followingCount",
-                                                style = MaterialTheme.typography.titleMedium,
-                                                fontFamily = FontFamily.Monospace,
-                                                color = cs.onSurface
-                                            )
-                                            Text("Takip Edilen", style = MaterialTheme.typography.bodySmall, color = cs.onSurface.copy(0.7f))
-                                        }
-                                    }
-
-                                    Spacer(Modifier.height(12.dp))
-
-                                    if (currentUserId == userId) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                        ) {
-                                            Button(
-                                                onClick = onCreatePost,
-                                                modifier = Modifier.weight(1f),
-                                                shape = MaterialTheme.shapes.medium,
-                                                colors = ButtonDefaults.buttonColors(
-                                                    containerColor = cs.primary,
-                                                    contentColor = cs.onPrimary
-                                                )
-                                            ) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.Center
-                                                ) {
-                                                    Icon(Icons.Default.Add, contentDescription = null) // 🔹 Gönderi ekleme ikonu
-                                                    Spacer(Modifier.width(6.dp))
-                                                    Text("Gönderi Paylaş", fontFamily = FontFamily.Monospace)
-                                                }
-                                            }
-
-                                            OutlinedButton(
-                                                onClick = onEditProfile,
-                                                modifier = Modifier.weight(1f),
-                                                shape = MaterialTheme.shapes.medium,
-                                                colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.primary)
-                                            ) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically, // 🔹 ikon ve text hizalı
-                                                    horizontalArrangement = Arrangement.Center
-                                                ) {
-                                                    Icon(Icons.Filled.Edit, contentDescription = null)
-                                                    Spacer(Modifier.width(6.dp))
-                                                    Text("Profili Düzenle", fontFamily = FontFamily.Monospace)
-                                                }
-                                            }
-                                        }
-
-                                    } else if (currentUserId != null) {
-                                        Button(
-                                            onClick = {
-                                                if (isFollowing) {
-                                                    FirestoreService.unfollowUser(currentUserId, userId) { ok, _ ->
-                                                        if (ok) { isFollowing = false; followersCount-- }
-                                                    }
-                                                } else {
-                                                    FirestoreService.followUser(currentUserId, userId) { ok, _ ->
-                                                        if (ok) { isFollowing = true; followersCount++ }
-                                                    }
-                                                }
-                                            },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            shape = MaterialTheme.shapes.medium,
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = if (isFollowing) cs.errorContainer else cs.primary,
-                                                contentColor = if (isFollowing) cs.onErrorContainer else cs.onPrimary
-                                            )
-                                        ) { Text(if (isFollowing) "Takipten Çık" else "Takip Et", fontFamily = FontFamily.Monospace) }
-                                    }
-                                }
-                            }
+                            ProfileHeader(
+                                profile!!,
+                                cs,
+                                userId,
+                                currentUserId,
+                                followersCount,
+                                followingCount,
+                                isFollowing,
+                                onFollowersClick,
+                                onFollowingClick,
+                                onCreatePost,
+                                onEditProfile,
+                                { new -> isFollowing = new },
+                                { new -> followersCount = new }
+                            )
                         }
 
-                        // GÖNDERİLER
+                        // POSTS
                         itemsIndexed(posts, key = { _, it -> it.postId }) { index, post ->
                             val isMine = currentUserId == userId
                             val shouldPeek = isMine && !hasPeeked && index == 0
@@ -359,6 +207,100 @@ fun UserProfileScreen(
     }
 }
 
+@Composable
+private fun ProfileHeader(
+    profile: UserProfile,
+    cs: ColorScheme,
+    userId: String,
+    currentUserId: String?,
+    followersCount: Int,
+    followingCount: Int,
+    isFollowing: Boolean,
+    onFollowersClick: (String) -> Unit,
+    onFollowingClick: (String) -> Unit,
+    onCreatePost: () -> Unit,
+    onEditProfile: () -> Unit,
+    updateFollowing: (Boolean) -> Unit,
+    updateFollowersCount: (Int) -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = cs.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        shape = MaterialTheme.shapes.large
+    ) {
+        Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            SubcomposeAsyncImage(
+                model = profile.profileImageUrl,
+                contentDescription = "Avatar",
+                contentScale = ContentScale.Crop,
+                loading = {
+                    Box(Modifier.size(96.dp).clip(CircleShape).background(cs.secondary.copy(alpha = 0.2f)))
+                },
+                error = {
+                    Box(Modifier.size(96.dp).clip(CircleShape).background(cs.secondary.copy(alpha = 0.2f)))
+                },
+                modifier = Modifier.size(96.dp).clip(CircleShape)
+            )
+
+            Spacer(Modifier.height(10.dp))
+            Text(profile.username, style = MaterialTheme.typography.titleLarge, fontFamily = FontFamily.Monospace, color = cs.onSurface)
+            profile.bio?.takeIf { it.isNotBlank() }?.let {
+                Spacer(Modifier.height(6.dp))
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = cs.onSurface.copy(alpha = 0.8f))
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                StatItem("$followersCount", "Takipçi", cs, onClick = { onFollowersClick(userId) })
+                StatItem("$followingCount", "Takip Edilen", cs, onClick = { onFollowingClick(userId) })
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            if (currentUserId == userId) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Button(onClick = onCreatePost, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Gönderi Paylaş", fontFamily = FontFamily.Monospace)
+                    }
+                    OutlinedButton(onClick = onEditProfile, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Filled.Edit, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Profili Düzenle", fontFamily = FontFamily.Monospace)
+                    }
+                }
+            } else if (currentUserId != null) {
+                Button(
+                    onClick = {
+                        if (isFollowing) {
+                            FirestoreService.unfollowUser(currentUserId, userId) { ok, _ ->
+                                if (ok) { updateFollowing(false); updateFollowersCount(followersCount - 1) }
+                            }
+                        } else {
+                            FirestoreService.followUser(currentUserId, userId) { ok, _ ->
+                                if (ok) { updateFollowing(true); updateFollowersCount(followersCount + 1) }
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (isFollowing) "Takipten Çık" else "Takip Et", fontFamily = FontFamily.Monospace)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatItem(value: String, label: String, cs: ColorScheme, onClick: () -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(onClick = onClick)) {
+        Text(value, style = MaterialTheme.typography.titleMedium, fontFamily = FontFamily.Monospace, color = cs.onSurface)
+        Text(label, style = MaterialTheme.typography.bodySmall, color = cs.onSurface.copy(0.7f))
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterialApi::class)
 @Composable
 fun RevealDismissPostCard(
@@ -376,29 +318,18 @@ fun RevealDismissPostCard(
             colors = CardDefaults.cardColors(containerColor = cs.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
             shape = MaterialTheme.shapes.large,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onClick() }
-        ) {
-            PostContent(post = post, cs = cs, ctx = ctx)
-        }
+            modifier = Modifier.fillMaxWidth().clickable { onClick() }
+        ) { PostContent(post, cs, ctx) }
         return
     }
 
     val density = LocalDensity.current
-    val revealPx = with(density) { 32.dp.toPx() } // 🔹 24dp sola "peek"
+    val revealPx = with(density) { 32.dp.toPx() }
     var widthPx by remember { mutableStateOf(0f) }
-    val swipeState = rememberSwipeableState(initialValue = CardPos.Closed)
+    val swipeState = rememberSwipeableState(CardPos.Closed)
 
-    // Sadece Closed ↔ Revealed (dismiss yok)
-    val anchors = remember(widthPx, revealPx) {
-        mapOf(
-            0f to CardPos.Closed,
-            -revealPx to CardPos.Revealed
-        )
-    }
+    val anchors = mapOf(0f to CardPos.Closed, -revealPx to CardPos.Revealed)
 
-    // İlk girişte otomatik peek (aç → kısa bekle → kapa)
     LaunchedEffect(doPeek) {
         if (doPeek) {
             swipeState.snapTo(CardPos.Closed)
@@ -415,26 +346,19 @@ fun RevealDismissPostCard(
             .onGloballyPositioned { widthPx = it.size.width.toFloat() }
             .height(IntrinsicSize.Min)
     ) {
-        // ARKA PLAN: kartın şekliyle clip + kartla uyumlu renk
+        // Arka plan: sil ikonu
         Box(
-            modifier = Modifier
-                .matchParentSize()
-                .clip(MaterialTheme.shapes.large)
-                .background(cs.surface)
+            modifier = Modifier.matchParentSize().clip(MaterialTheme.shapes.large).background(cs.surface)
         ) {
-            // ÇÖP KUTUSU: TAM en sağda, padding/margin = 0
             Icon(
                 imageVector = Icons.Filled.Delete,
                 contentDescription = "Sil",
                 tint = cs.error,
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 4.dp)
-                    .clickable(onClick = onRequestDelete)
+                modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp).clickable(onClick = onRequestDelete)
             )
         }
 
-        // ÖN PLAN: Kart
+        // Ön plan: kart
         Card(
             colors = CardDefaults.cardColors(containerColor = cs.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -445,68 +369,36 @@ fun RevealDismissPostCard(
                 .swipeable(
                     state = swipeState,
                     anchors = anchors,
-                    thresholds = { _, _ -> FractionalThreshold(0.3f) }, // 24dp'ye kolay otursun
+                    thresholds = { _, _ -> FractionalThreshold(0.3f) },
                     orientation = Orientation.Horizontal,
-                    enabled = true,
-                    reverseDirection = false, // sağdan sola negatif offset
+                    reverseDirection = false,
                     resistance = null
                 )
                 .combinedClickable(
                     onClick = onClick,
                     onLongClick = onRequestDelete
                 )
-        ) {
-            PostContent(post = post, cs = cs, ctx = ctx)
-        }
+        ) { PostContent(post, cs, ctx) }
     }
 }
 
 @Composable
-private fun PostContent(
-    post: Post,
-    cs: ColorScheme,
-    ctx: Context
-) {
+private fun PostContent(post: Post, cs: ColorScheme, ctx: Context) {
     Column(Modifier.padding(16.dp)) {
-        Text(
-            post.title,
-            style = MaterialTheme.typography.titleMedium,
-            color = cs.onSurface,
-            fontFamily = FontFamily.Monospace
-        )
+        Text(post.title, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontFamily = FontFamily.Monospace)
         post.photoUrl?.let { url ->
             Spacer(Modifier.height(10.dp))
             SubcomposeAsyncImage(
                 model = ImageRequest.Builder(ctx).data(url).crossfade(true).build(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                loading = {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(180.dp)
-                            .background(cs.secondary.copy(alpha = 0.1f))
-                    )
-                },
+                loading = { Box(Modifier.fillMaxWidth().height(180.dp).background(cs.secondary.copy(alpha = 0.1f))) },
                 error = {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(180.dp)
-                            .background(cs.secondary.copy(alpha = 0.1f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            "Görsel yüklenemedi",
-                            color = cs.onSurface.copy(0.7f),
-                            fontFamily = FontFamily.Monospace
-                        )
+                    Box(Modifier.fillMaxWidth().height(180.dp).background(cs.secondary.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
+                        Text("Görsel yüklenemedi", color = cs.onSurface.copy(0.7f))
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-                    .clip(MaterialTheme.shapes.medium)
+                modifier = Modifier.fillMaxWidth().height(180.dp).clip(MaterialTheme.shapes.medium)
             )
         }
     }

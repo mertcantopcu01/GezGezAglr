@@ -28,6 +28,7 @@ import com.example.myapplication.firebase.FirestoreService
 import com.example.myapplication.firebase.Post
 import com.example.myapplication.firebase.UserProfile
 import com.example.myapplication.ui.AppBackground
+import com.example.myapplication.ui.AppThemeColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,22 +73,21 @@ fun HomeScreen(
                             "GezGezAglr",
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.SemiBold,
-                            color = cs.onPrimary
                         )
                     },
                     actions = {
                         IconButton(onClick = onNavigateToSearch) {
-                            Icon(Icons.Default.Search, contentDescription = "Ara", tint = cs.onPrimary)
+                            Icon(Icons.Default.Search, contentDescription = "Ara", )
                         }
                         IconButton(onClick = onNavigateToProfile) {
-                            Icon(Icons.Default.Person, contentDescription = "Profil", tint = cs.onPrimary)
+                            Icon(Icons.Default.Person, contentDescription = "Profil", )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = cs.primary,
-                        titleContentColor = cs.onPrimary,
-                        actionIconContentColor = cs.onPrimary,
-                        navigationIconContentColor = cs.onPrimary
+                        containerColor = AppThemeColors.extra.topBar,
+                        titleContentColor = AppThemeColors.extra.onTopBar,
+                        navigationIconContentColor = AppThemeColors.extra.onTopBar,
+                        actionIconContentColor = AppThemeColors.extra.onTopBar
                     )
                 )
             },

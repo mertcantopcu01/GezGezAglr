@@ -21,6 +21,7 @@ import coil.request.ImageRequest
 import com.example.myapplication.firebase.FirestoreService
 import com.example.myapplication.firebase.UserProfile
 import com.example.myapplication.ui.AppBackground
+import com.example.myapplication.ui.AppThemeColors   // 👈 eklendi
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,7 +49,7 @@ fun FollowingScreen(
                     title = {
                         Text(
                             "Takip Edilenler",
-                            color = cs.onPrimary, // tema uyumlu
+                            color = AppThemeColors.extra.onTopBar,
                             fontFamily = FontFamily.Monospace
                         )
                     },
@@ -57,14 +58,15 @@ fun FollowingScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Geri",
-                                tint = cs.onPrimary
+                                tint = AppThemeColors.extra.onTopBar
                             )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = cs.primary, // light/dark otomatik uyum
-                        titleContentColor = cs.onPrimary,
-                        navigationIconContentColor = cs.onPrimary
+                        containerColor = AppThemeColors.extra.topBar,
+                        titleContentColor = AppThemeColors.extra.onTopBar,
+                        navigationIconContentColor = AppThemeColors.extra.onTopBar,
+                        actionIconContentColor = AppThemeColors.extra.onTopBar
                     )
                 )
             },
@@ -108,6 +110,7 @@ fun FollowingScreen(
                             dialogSubmitting = true
                             val old = list
                             loadingIds.add(target.uid)
+                            // Optimistic UI
                             list = list.filter { it.uid != target.uid }
                             pendingUnfollow = null
                             dialogSubmitting = false
@@ -121,7 +124,7 @@ fun FollowingScreen(
                             }
                         }
                     ) {
-                        Text("Evet, çıkar", color = cs.error) // kırmızı vurgulu
+                        Text("Evet, çıkar", color = cs.error)
                     }
                 },
                 dismissButton = {
