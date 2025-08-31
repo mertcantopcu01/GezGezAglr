@@ -24,6 +24,7 @@ import coil.request.ImageRequest
 import com.example.myapplication.firebase.FirestoreService
 import com.example.myapplication.firebase.UserProfile
 import com.example.myapplication.ui.AppBackground
+import com.example.myapplication.ui.AppThemeColors
 import com.example.myapplication.ui.TextFieldStyles
 import kotlinx.coroutines.delay
 
@@ -67,7 +68,7 @@ fun SearchScreen(
                         Text(
                             "Kullanıcı Ara",
                             fontFamily = FontFamily.Monospace,
-                            color = cs.onPrimary
+                            color = AppThemeColors.extra.onTopBar
                         )
                     },
                     navigationIcon = {
@@ -75,14 +76,15 @@ fun SearchScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Geri",
-                                tint = cs.onPrimary
+                                tint = AppThemeColors.extra.onTopBar
                             )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = cs.primary,
-                        titleContentColor = cs.onPrimary,
-                        navigationIconContentColor = cs.onPrimary
+                        containerColor = AppThemeColors.extra.topBar,
+                        titleContentColor = AppThemeColors.extra.onTopBar,
+                        navigationIconContentColor = AppThemeColors.extra.onTopBar,
+                        actionIconContentColor = AppThemeColors.extra.onTopBar
                     )
                 )
             },

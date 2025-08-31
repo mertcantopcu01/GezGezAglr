@@ -31,6 +31,7 @@ import com.example.myapplication.firebase.FirestoreService
 import com.example.myapplication.firebase.UserProfile
 import com.example.myapplication.ui.TextFieldStyles
 import com.example.myapplication.ui.AppBackground
+import com.example.myapplication.ui.AppThemeColors   // 👈 EKLENDİ
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,7 +95,7 @@ fun EditProfileScreen(
                             "Profili Düzenle",
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.SemiBold,
-                            color = cs.onPrimary
+                            color = AppThemeColors.extra.onTopBar   // 👈 onTopBar
                         )
                     },
                     navigationIcon = {
@@ -102,7 +103,7 @@ fun EditProfileScreen(
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Geri",
-                                tint = cs.onPrimary
+                                tint = AppThemeColors.extra.onTopBar // 👈 onTopBar
                             )
                         }
                     },
@@ -130,14 +131,18 @@ fun EditProfileScreen(
                             },
                             enabled = !saving && uid != null && username.isNotBlank()
                         ) {
-                            Icon(Icons.Filled.Check, contentDescription = "Kaydet", tint = cs.onPrimary)
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = "Kaydet",
+                                tint = AppThemeColors.extra.onTopBar // 👈 onTopBar
+                            )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        titleContentColor = cs.onPrimary,
-                        navigationIconContentColor = cs.onPrimary,
-                        actionIconContentColor = cs.onPrimary
+                        containerColor = AppThemeColors.extra.topBar, // 👈 topBar
+                        titleContentColor = AppThemeColors.extra.onTopBar,
+                        navigationIconContentColor = AppThemeColors.extra.onTopBar,
+                        actionIconContentColor = AppThemeColors.extra.onTopBar
                     )
                 )
             },

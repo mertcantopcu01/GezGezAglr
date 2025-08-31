@@ -10,7 +10,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -42,17 +41,17 @@ fun LoginScreen(
                 .fillMaxSize()
                 .padding(20.dp)
         ) {
-            // Üst başlık
+            // Başlık
             Text(
                 text = "GezGezAglr",
-                style = TextStyle(
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 24.sp,
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 28.sp,
                     color = if (isDark) Color.White else Color(0xFF0A2742)
                 ),
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = 24.dp)
+                    .padding(top = 48.dp)
             )
 
             // Kart
@@ -61,9 +60,7 @@ fun LoginScreen(
                     .align(Alignment.Center)
                     .fillMaxWidth()
                     .padding(horizontal = 6.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = cs.surface // Light: beyaz, Dark: nötr gri
-                ),
+                colors = CardDefaults.cardColors(containerColor = cs.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
             ) {
                 Column(
@@ -74,42 +71,61 @@ fun LoginScreen(
                         text = "Giriş Yap",
                         style = MaterialTheme.typography.headlineSmall,
                         color = cs.onSurface,
-                        fontFamily = FontFamily.Monospace
+                        fontFamily = FontFamily.SansSerif
                     )
 
                     Spacer(Modifier.height(18.dp))
 
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it; errorMessage = null },
-                        label = { Text("E-posta") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = tfColors
-                    )
+                    // E-posta alanı
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "E-posta",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontFamily = FontFamily.SansSerif,
+                            color = cs.onSurface.copy(alpha = 0.8f)
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        OutlinedTextField(
+                            value = email,
+                            onValueChange = { email = it; errorMessage = null },
+                            placeholder = { Text("E-posta adresinizi girin") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = tfColors
+                        )
+                    }
 
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(16.dp))
 
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it; errorMessage = null },
-                        label = { Text("Şifre") },
-                        singleLine = true,
-                        visualTransformation = if (showPw) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            TextButton(
-                                onClick = { showPw = !showPw },
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (showPw) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                                    contentDescription = if (showPw) "Şifreyi gizle" else "Şifreyi göster"
-                                ) }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = tfColors
-                    )
+                    // Parola alanı
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "Parola",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontFamily = FontFamily.SansSerif,
+                            color = cs.onSurface.copy(alpha = 0.8f)
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = { password = it; errorMessage = null },
+                            placeholder = { Text("Parolanızı girin") },
+                            singleLine = true,
+                            visualTransformation = if (showPw) VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = { showPw = !showPw }) {
+                                    Icon(
+                                        imageVector = if (showPw) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                        contentDescription = if (showPw) "Şifreyi gizle" else "Şifreyi göster"
+                                    )
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = tfColors
+                        )
+                    }
 
+                    // Hata mesajı
                     if (!errorMessage.isNullOrBlank()) {
                         Spacer(Modifier.height(10.dp))
                         Surface(
@@ -121,13 +137,14 @@ fun LoginScreen(
                                 text = errorMessage!!,
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                                 style = MaterialTheme.typography.bodyMedium,
-                                fontFamily = FontFamily.Monospace
+                                fontFamily = FontFamily.SansSerif
                             )
                         }
                     }
 
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(20.dp))
 
+                    // Giriş butonu
                     Button(
                         onClick = {
                             isLoading = true
@@ -150,14 +167,14 @@ fun LoginScreen(
                                 color = cs.onPrimary
                             )
                         } else {
-                            Text("Giriş Yap", fontSize = 16.sp, fontFamily = FontFamily.Monospace)
+                            Text("Giriş Yap", fontSize = 16.sp, fontFamily = FontFamily.SansSerif)
                         }
                     }
 
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
 
                     TextButton(onClick = onNavigateToRegister) {
-                        Text("Kaydol", style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace)
+                        Text("Hesabın yok mu? Kaydol", style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.SansSerif)
                     }
                 }
             }

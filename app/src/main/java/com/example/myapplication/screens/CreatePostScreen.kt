@@ -17,7 +17,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +32,7 @@ import com.example.myapplication.firebase.FirebaseStorageService
 import com.example.myapplication.firebase.FirestoreService
 import com.example.myapplication.ui.AppBackground
 import com.example.myapplication.ui.TextFieldStyles
+import com.example.myapplication.ui.AppThemeColors
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
@@ -57,7 +57,7 @@ fun CreatePostScreen(
 
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var locationText by remember { mutableStateOf("") }   // 👈 otomatik konum sonucu burada
+    var locationText by remember { mutableStateOf("") }   // otomatik konum sonucu
     var rating by remember { mutableStateOf(5f) }         // 0..10
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var isLoading by remember { mutableStateOf(false) }
@@ -81,16 +81,23 @@ fun CreatePostScreen(
         if (fine || coarse) {
             scope.launch {
                 val pd = getProvinceDistrictFromDevice(context)
-                val formatted = pd?.let { it.province?.let { p ->
-                    val d = it.district?.takeIf { s -> s.isNotBlank() }
-                    if (d != null) "$p / $d" else p
-                }}
+                val formatted = pd?.let {
+                    val p = it.province?.takeIf(String::isNotBlank)
+                    val d = it.district?.takeIf(String::isNotBlank)
+                    when {
+                        p != null && d != null -> "$p / $d"
+                        p != null -> p
+                        else -> null
+                    }
+                }
                 if (formatted != null) {
                     locationText = formatted
+                } else {
+                    errorMsg = "Konum alınamadı. Tekrar deneyin."
                 }
             }
         } else {
-            errorMsg = context.getString(R.string.title_and_desc_required) // istersen özel "izin gerekli" metni ekle
+            errorMsg = "Konum için izin gerekli. Ayarlardan erişim izni verin."
         }
     }
 
@@ -101,7 +108,7 @@ fun CreatePostScreen(
                     title = {
                         Text(
                             text = stringResource(R.string.create_post),
-                            color = cs.onPrimary,
+                            color = AppThemeColors.extra.onTopBar,
                             fontFamily = FontFamily.Monospace
                         )
                     },
@@ -110,15 +117,15 @@ fun CreatePostScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Geri",
-                                tint = cs.onPrimary
+                                tint = AppThemeColors.extra.onTopBar
                             )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = cs.primary,
-                        titleContentColor = cs.onPrimary,
-                        navigationIconContentColor = cs.onPrimary,
-                        actionIconContentColor = cs.onPrimary
+                        containerColor = AppThemeColors.extra.topBar,
+                        titleContentColor = AppThemeColors.extra.onTopBar,
+                        navigationIconContentColor = AppThemeColors.extra.onTopBar,
+                        actionIconContentColor = AppThemeColors.extra.onTopBar
                     )
                 )
             },
@@ -160,7 +167,7 @@ fun CreatePostScreen(
                             colors = tfColors
                         )
 
-                        // 👇 KONUM (otomatik – readOnly alan + butonlar)
+                        // KONUM (otomatik – readOnly alan + butonlar)
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -264,7 +271,7 @@ fun CreatePostScreen(
                                         description = description,
                                         rating = rating.toInt(),
                                         photoUrl = imageUrl,
-                                        location = locationText.ifBlank { null }   // 👈 konumu kaydet
+                                        location = locationText.ifBlank { null }   // konumu kaydet
                                     ) { ok ->
                                         isLoading = false
                                         if (ok) onPostCreated() else errorMsg = context.getString(R.string.post_save_failed)
