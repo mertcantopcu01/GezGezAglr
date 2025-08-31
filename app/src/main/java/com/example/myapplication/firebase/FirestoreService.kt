@@ -1,6 +1,7 @@
 package com.example.myapplication.firebase
 
 import android.util.Log
+import androidx.compose.runtime.Composable
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldPath
@@ -37,13 +38,6 @@ object FirestoreService {
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
-    fun createUserProfile(uid: String, username: String, email: String, onComplete: (Boolean) -> Unit) {
-        val user = UserProfile(uid = uid, username = username, email = email)
-        db.collection("users").document(uid)
-            .set(user)
-            .addOnSuccessListener { onComplete(true) }
-            .addOnFailureListener { onComplete(false) }
-    }
 
     fun getUserProfile(uid: String, onResult: (UserProfile?) -> Unit) {
         db.collection("users").document(uid).get()
@@ -74,28 +68,6 @@ object FirestoreService {
         Log.d(TAG, "saveUserProfile çağrıldı: $username, $bio")
     }
 
-    fun postTweet(
-        uid: String,
-        text: String,
-        photoUrl: String?,
-        location: String?,
-        onComplete: (Boolean) -> Unit
-    ) {
-        val data = hashMapOf(
-            "uid" to uid,
-            "text" to text,
-            "photoUrl" to photoUrl,
-            "location" to location,
-            "timestamp" to System.currentTimeMillis()
-        )
-
-        Log.e(TAG, "postTweet: $uid")
-
-        db.collection("posts")
-            .add(data)
-            .addOnSuccessListener { onComplete(true) }
-            .addOnFailureListener { onComplete(false) }
-    }
 
     fun getUserPosts(uid: String, onResult: (List<Post>) -> Unit) {
         db.collection("posts")
@@ -190,7 +162,7 @@ object FirestoreService {
             .addOnFailureListener { e -> onComplete(false, e.message) }
     }
 
-    fun unfollowUser(
+    fun     unfollowUser(
         followerId: String,
         followingId: String,
         onComplete: (Boolean, String?) -> Unit

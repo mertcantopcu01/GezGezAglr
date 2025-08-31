@@ -13,7 +13,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -32,7 +31,11 @@ fun FollowingScreen(
 ) {
     val cs = MaterialTheme.colorScheme
     val ctx = LocalContext.current
+
     var list by remember { mutableStateOf<List<UserProfile>>(emptyList()) }
+    val loadingIds = remember { mutableStateListOf<String>() }
+    var pendingUnfollow by remember { mutableStateOf<UserProfile?>(null) }
+    var dialogSubmitting by remember { mutableStateOf(false) }
 
     LaunchedEffect(userId) {
         FirestoreService.getFollowingList(userId) { list = it }
@@ -45,7 +48,7 @@ fun FollowingScreen(
                     title = {
                         Text(
                             "Takip Edilenler",
-                            color = Color.White,
+                            color = cs.onPrimary, // tema uyumlu
                             fontFamily = FontFamily.Monospace
                         )
                     },
@@ -54,18 +57,18 @@ fun FollowingScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Geri",
-                                tint = Color.White
+                                tint = cs.onPrimary
                             )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        titleContentColor = Color.White,
-                        navigationIconContentColor = Color.White
+                        containerColor = cs.primary, // light/dark otomatik uyum
+                        titleContentColor = cs.onPrimary,
+                        navigationIconContentColor = cs.onPrimary
                     )
                 )
             },
-            containerColor = Color.Transparent
+            containerColor = cs.background
         ) { padding ->
             LazyColumn(
                 modifier = Modifier
@@ -75,12 +78,62 @@ fun FollowingScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(list, key = { it.uid }) { u ->
+                    val isLoading = loadingIds.contains(u.uid)
                     FollowingRowCard(
                         profile = u,
-                        onClick = { onUserClick(u.uid) }
+                        onClick = { onUserClick(u.uid) },
+                        isLoading = isLoading,
+                        onUnfollowClick = { pendingUnfollow = u }
                     )
                 }
             }
+        }
+
+        // Onay Dialog
+        val target = pendingUnfollow
+        if (target != null) {
+            AlertDialog(
+                onDismissRequest = { if (!dialogSubmitting) pendingUnfollow = null },
+                title = { Text("Takibi bırak?", color = cs.onSurface) },
+                text = {
+                    Text(
+                        "“${target.username}” kullanıcısını takip etmeyi bırakmak istediğine emin misin?",
+                        color = cs.onSurface
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = !dialogSubmitting,
+                        onClick = {
+                            dialogSubmitting = true
+                            val old = list
+                            loadingIds.add(target.uid)
+                            list = list.filter { it.uid != target.uid }
+                            pendingUnfollow = null
+                            dialogSubmitting = false
+
+                            FirestoreService.unfollowUser(
+                                followerId = userId,
+                                followingId = target.uid
+                            ) { success, _ ->
+                                loadingIds.remove(target.uid)
+                                if (!success) list = old
+                            }
+                        }
+                    ) {
+                        Text("Evet, çıkar", color = cs.error) // kırmızı vurgulu
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        enabled = !dialogSubmitting,
+                        onClick = { if (!dialogSubmitting) pendingUnfollow = null }
+                    ) { Text("İptal", color = cs.primary) }
+                },
+                containerColor = cs.surface,
+                titleContentColor = cs.onSurface,
+                textContentColor = cs.onSurface
+            )
         }
     }
 }
@@ -88,7 +141,9 @@ fun FollowingScreen(
 @Composable
 private fun FollowingRowCard(
     profile: UserProfile,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    isLoading: Boolean,
+    onUnfollowClick: () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
     val ctx = LocalContext.current
@@ -137,7 +192,7 @@ private fun FollowingRowCard(
 
             Spacer(Modifier.width(12.dp))
 
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = profile.username,
                     style = MaterialTheme.typography.titleSmall,
@@ -152,6 +207,31 @@ private fun FollowingRowCard(
                         color = cs.onSurface.copy(alpha = 0.7f)
                     )
                 }
+            }
+
+            OutlinedButton(
+                onClick = onUnfollowClick,
+                enabled = !isLoading,
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                border = ButtonDefaults.outlinedButtonBorder,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = if (isLoading) cs.onSurface.copy(alpha = 0.5f) else cs.primary
+                ),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .padding(end = 6.dp),
+                        strokeWidth = 2.dp,
+                        color = cs.primary
+                    )
+                }
+                Text(
+                    text = if (isLoading) "Çıkılıyor..." else "Takibi bırak",
+                    style = MaterialTheme.typography.labelMedium
+                )
             }
         }
     }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
@@ -15,7 +16,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -29,7 +29,10 @@ import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchScreen(onUserSelected: (String) -> Unit) {
+fun SearchScreen(
+    onUserSelected: (String) -> Unit,
+    onBack: () -> Unit   // ✅ geri dönüş callback
+) {
     val cs = MaterialTheme.colorScheme
     val context = LocalContext.current
     val tfColors = TextFieldStyles.defaultTextFieldColors()
@@ -62,18 +65,28 @@ fun SearchScreen(onUserSelected: (String) -> Unit) {
                 TopAppBar(
                     title = {
                         Text(
-                            "• Kullanıcı / Profil Ara",
+                            "Kullanıcı Ara",
                             fontFamily = FontFamily.Monospace,
-                            color = Color.White
+                            color = cs.onPrimary
                         )
                     },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Geri",
+                                tint = cs.onPrimary
+                            )
+                        }
+                    },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        titleContentColor = Color.White
+                        containerColor = cs.primary,
+                        titleContentColor = cs.onPrimary,
+                        navigationIconContentColor = cs.onPrimary
                     )
                 )
             },
-            containerColor = Color.Transparent
+            containerColor = cs.background
         ) { padding ->
             Column(
                 modifier = Modifier
@@ -81,7 +94,7 @@ fun SearchScreen(onUserSelected: (String) -> Unit) {
                     .padding(padding)
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                // Arama kutusu
+                // 🔍 Arama kutusu
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
@@ -145,6 +158,7 @@ fun SearchScreen(onUserSelected: (String) -> Unit) {
         }
     }
 }
+
 
 @Composable
 private fun UserRowCard(

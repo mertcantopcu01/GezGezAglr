@@ -36,6 +36,9 @@
     <string name="chosen_photo">Seçilen Foto</string>
     <string name="place_name">Mekan İsmi</string>
     <string name="description">Açıklama\n</string>
+    <string name="remove">Çıkar</string>
     <string name="create_post">Gönderi Oluştur</string>
+    <string name="post_save_failed">Gönderi oluşturulamadı</string>
+    <string name="title_and_desc_required">başlık ve açıklama gerekli</string>
 
 </resources>

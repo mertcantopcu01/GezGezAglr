@@ -46,26 +46,29 @@ android {
 
 dependencies {
 
+
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.compose.material)
+    implementation(libs.play.services.location)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
 
-    implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)
-    implementation(libs.compose.material3)
-    implementation(platform("androidx.compose:compose-bom:2024.05.00"))
+    implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.runtime:runtime")
     implementation("androidx.activity:activity-compose:1.8.2")
     implementation("io.coil-kt:coil-compose:2.5.0")
     implementation ("com.google.accompanist:accompanist-swiperefresh:0.30.1")
+    implementation("androidx.compose.material:material-icons-extended")
+
 
 
 
@@ -85,6 +88,14 @@ dependencies {
 
     // Firebase Authentication
     implementation("com.google.firebase:firebase-auth-ktx")
+
+    implementation(platform("androidx.compose:compose-bom:2024.09.00"))
+    implementation("androidx.compose.material:material")
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+
+
+
+
 
 
 

@@ -1,6 +1,5 @@
 package com.example.myapplication.screens
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,14 +16,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
-import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.example.myapplication.firebase.AuthService
 import com.example.myapplication.firebase.FirestoreService
@@ -75,25 +72,26 @@ fun HomeScreen(
                             "GezGezAglr",
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White        // ← başlık beyaz
+                            color = cs.onPrimary
                         )
                     },
                     actions = {
                         IconButton(onClick = onNavigateToSearch) {
-                            Icon(Icons.Default.Search, contentDescription = "Ara", tint = Color.White)
+                            Icon(Icons.Default.Search, contentDescription = "Ara", tint = cs.onPrimary)
                         }
                         IconButton(onClick = onNavigateToProfile) {
-                            Icon(Icons.Default.Person, contentDescription = "Profil", tint = Color.White)
+                            Icon(Icons.Default.Person, contentDescription = "Profil", tint = cs.onPrimary)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        titleContentColor = Color.White,
-                        actionIconContentColor = Color.White
+                        containerColor = cs.primary,
+                        titleContentColor = cs.onPrimary,
+                        actionIconContentColor = cs.onPrimary,
+                        navigationIconContentColor = cs.onPrimary
                     )
                 )
             },
-            containerColor = Color.Transparent
+            containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
             Box(
                 modifier = Modifier
@@ -136,7 +134,6 @@ fun HomeScreen(
     }
 }
 
-
 @Composable
 private fun PostCard(
     post: Post,
@@ -161,7 +158,7 @@ private fun PostCard(
                 .padding(14.dp),
             verticalAlignment = Alignment.Top
         ) {
-            // SOL: avatar + kullanıcı adı + başlık + rating/konum
+            // SOL: avatar + kullanıcı adı + konum
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -177,10 +174,20 @@ private fun PostCard(
                             contentDescription = "Avatar",
                             contentScale = ContentScale.Crop,
                             loading = {
-                                Box(Modifier.size(40.dp).clip(CircleShape).background(cs.secondary.copy(0.2f)))
+                                Box(
+                                    Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(cs.secondary.copy(alpha = 0.2f))
+                                )
                             },
                             error = {
-                                Box(Modifier.size(40.dp).clip(CircleShape).background(cs.secondary.copy(0.2f)))
+                                Box(
+                                    Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(cs.secondary.copy(alpha = 0.2f))
+                                )
                             },
                             modifier = Modifier
                                 .size(40.dp)
@@ -216,7 +223,7 @@ private fun PostCard(
                     }
 
                     IconButton(onClick = { /* menü */ }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Menü")
+                        Icon(Icons.Default.MoreVert, contentDescription = "Menü", tint = cs.onSurface)
                     }
                 }
 
@@ -263,7 +270,7 @@ private fun PostCard(
                                 .width(120.dp)
                                 .height(160.dp)
                                 .clip(MaterialTheme.shapes.medium)
-                                .background(cs.secondary.copy(0.1f))
+                                .background(cs.secondary.copy(alpha = 0.1f))
                         )
                     },
                     error = {
@@ -272,12 +279,18 @@ private fun PostCard(
                                 .width(120.dp)
                                 .height(160.dp)
                                 .clip(MaterialTheme.shapes.medium)
-                                .background(cs.secondary.copy(0.1f)),
+                                .background(cs.secondary.copy(alpha = 0.1f)),
                             contentAlignment = Alignment.Center
-                        ) { Text("Görsel yok", fontFamily = FontFamily.Monospace) }
+                        ) {
+                            Text(
+                                "Görsel yok",
+                                color = cs.onSurface.copy(alpha = 0.6f),
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
                     },
                     modifier = Modifier
-                        .width(120.dp)      // gerekirse 110–140dp arası oynat
+                        .width(120.dp)
                         .height(160.dp)
                         .clip(MaterialTheme.shapes.medium)
                 )

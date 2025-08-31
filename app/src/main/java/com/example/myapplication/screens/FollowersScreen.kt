@@ -13,7 +13,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -45,7 +44,7 @@ fun FollowersScreen(
                     title = {
                         Text(
                             "Takipçiler",
-                            color = Color.White,
+                            color = cs.onPrimary,
                             fontFamily = FontFamily.Monospace
                         )
                     },
@@ -54,18 +53,18 @@ fun FollowersScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Geri",
-                                tint = Color.White
+                                tint = cs.onPrimary
                             )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        titleContentColor = Color.White,
-                        navigationIconContentColor = Color.White
+                        containerColor = cs.primary,
+                        titleContentColor = cs.onPrimary,
+                        navigationIconContentColor = cs.onPrimary
                     )
                 )
             },
-            containerColor = Color.Transparent
+            containerColor = cs.background
         ) { padding ->
             LazyColumn(
                 modifier = Modifier

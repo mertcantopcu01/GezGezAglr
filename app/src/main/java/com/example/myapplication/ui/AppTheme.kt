@@ -1,4 +1,3 @@
-
 package com.example.myapplication.ui
 
 import android.app.Activity
@@ -19,35 +18,36 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 
 // Light ve Dark renk şemaları
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF2D6AA6),
+    primary = Color(0xFF64B5F6), // açık mavi
     onPrimary = Color.White,
-    background = Color(0xFFF3F6FA), // açık arka plan
-    surface = Color.White,          // kart beyaz
+    background = Color(0xFFF3F6FA),
+    surface = Color.White,
     onSurface = Color(0xFF1A1A1A)
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFF2D6AA6),
+    primary = Color(0xFF0B1622),
     onPrimary = Color.White,
-    background = Color(0xFF0B1622),   // arka plan (degrade ile kaplanacak)
-    surface = Color(0xFFE0E0E0),      // 🔹 açık gri kart (pembe değil, siyah değil)
-    onSurface = Color(0xFF1A1A1A)     // koyu yazı
+    background = Color(0xFF0B1622),
+    surface = Color(0xFF424242),
+    onSurface = Color(0xFF0B1622),
 )
 
 // Dark mod degrade arka plan
 private val DarkGradient = Brush.linearGradient(
     colors = listOf(
-        Color(0xFF0A2742), // lacivert
-        Color(0xFF123E63)  // mavi
+        Color(0xFF0A2742),
+        Color(0xFF123E63)
     ),
     start = Offset.Zero,
     end = Offset(0f, Float.POSITIVE_INFINITY)
 )
 
-/** Uygulama genel teması (tek yerden) */
 @Composable
 fun AppTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -56,38 +56,45 @@ fun AppTheme(
     val colors = if (darkTheme) DarkColors else LightColors
 
     MaterialTheme(colorScheme = colors) {
-        // Sistem çubukları (status/nav bar)
         ThemedSystemBars(
-            statusBarColor = if (darkTheme) Color(0xFF0A2742) else colors.background,
-            navigationBarColor = if (darkTheme) Color(0xFF0A2742) else colors.background,
             darkTheme = darkTheme
         )
         content()
     }
 }
 
-/** Sistem çubuklarını günceller, ikon kontrastını moda göre ayarlar */
 @Composable
-private fun ThemedSystemBars(
-    statusBarColor: Color,
-    navigationBarColor: Color,
-    darkTheme: Boolean
-) {
+private fun ThemedSystemBars(darkTheme: Boolean) {
     val view = LocalView.current
     SideEffect {
         val window = (view.context as Activity).window
+
+        // Edge-to-edge önerilir
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        // Renkler (senin istediğin gibi)
+        val statusBarColor = if (darkTheme) Color.Black else Color(0xFF64B5F6)
+        val navigationBarColor = if (darkTheme) Color.Black else Color(0xFF64B5F6)
         window.statusBarColor = statusBarColor.toArgb()
         window.navigationBarColor = navigationBarColor.toArgb()
 
         val controller = WindowCompat.getInsetsController(window, view)
-        controller.isAppearanceLightStatusBars = !darkTheme
+
+        // Status bar ikonları beyaz kalsın
+        controller.isAppearanceLightStatusBars = false
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            controller.isAppearanceLightNavigationBars = !darkTheme
+            controller.isAppearanceLightNavigationBars = false
         }
+
+        // 🔻 Alt navigation bar'ı gizle, swipe ile geçici göster
+        controller.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        controller.hide(WindowInsetsCompat.Type.navigationBars())
+        // Eğer status bar'ı da gizlemek istersen:
+        // controller.hide(WindowInsetsCompat.Type.systemBars())
     }
 }
 
-/** Ekran kökünde kullan: Light’ta düz, Dark’ta degrade arka plan verir */
 @Composable
 fun AppBackground(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val dark = isSystemInDarkTheme()
