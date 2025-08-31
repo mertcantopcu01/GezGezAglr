@@ -32,7 +32,7 @@ import com.example.myapplication.ui.AppBackground
 @Composable
 fun PostDetailScreen(
     postId: String,
-    onBack: (() -> Unit)? = null // Nav'da kullanırsan gönder, yoksa bırak
+    onBack: () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
     val ctx = LocalContext.current
@@ -51,188 +51,200 @@ fun PostDetailScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = {
-                        Text(
-                            post?.title?.takeIf { it.isNotBlank() } ?: "Gönderi",
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            color = Color.White,
-                            fontFamily = FontFamily.Monospace
-                        )
-                    },
+
                     navigationIcon = {
                         onBack?.let {
                             IconButton(onClick = it) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Geri",
-                                    tint = Color.White
+                                    tint = cs.onPrimary,
                                 )
                             }
                         }
                     },
+                    title = {
+                        Text(
+                            post?.title?.takeIf { it.isNotBlank() } ?: "Gönderi",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = cs.onPrimary,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        titleContentColor = Color.White
+                        containerColor = cs.primary,
+                        titleContentColor = cs.onPrimary,
+                        navigationIconContentColor = cs.onPrimary
                     )
                 )
             },
-            containerColor = Color.Transparent
+            containerColor = cs.background
         ) { padding ->
-            if (loading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = cs.primary)
-                }
-            } else if (post == null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Gönderi bulunamadı.", color = cs.onBackground)
-                }
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .verticalScroll(scroll)
-                ) {
-                    // KAPAK GÖRSELİ
-                    post!!.photoUrl?.let { url ->
-                        Box {
-                            SubcomposeAsyncImage(
-                                model = ImageRequest.Builder(ctx)
-                                    .data(url)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                loading = {
-                                    Box(
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .height(240.dp)
-                                            .background(cs.secondary.copy(alpha = 0.1f))
-                                    )
-                                },
-                                error = {
-                                    Box(
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .height(240.dp)
-                                            .background(cs.secondary.copy(alpha = 0.1f)),
-                                        contentAlignment = Alignment.Center
-                                    ) { Text("Görsel yüklenemedi") }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(240.dp)
-                            )
-                            // Alttan hafif karartma (başlık okunabilirliği için)
-                            Box(
-                                modifier = Modifier
-                                    .matchParentSize()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            0f to Color.Transparent,
-                                            0.7f to Color.Transparent,
-                                            1f to Color.Black.copy(alpha = 0.25f)
-                                        )
-                                    )
-                            )
-                        }
-                    }
-
-                    // DETAY KARTI
-                    Card(
+            when {
+                loading -> {
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = cs.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                            .fillMaxSize()
+                            .padding(padding),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(Modifier.padding(16.dp)) {
-                            Text(
-                                text = post!!.title,
-                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
-                                color = cs.onSurface,
-                                fontFamily = FontFamily.Monospace
-                            )
+                        CircularProgressIndicator(color = cs.primary)
+                    }
+                }
 
-                            Spacer(Modifier.height(10.dp))
+                post == null -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Gönderi bulunamadı.", color = cs.onBackground)
+                    }
+                }
 
-                            // ROZETLER: Puan + Konum
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // Puan rozeti
-                                Row(
+                else -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .verticalScroll(scroll)
+                    ) {
+                        // KAPAK GÖRSELİ
+                        post!!.photoUrl?.let { url ->
+                            Box {
+                                SubcomposeAsyncImage(
+                                    model = ImageRequest.Builder(ctx)
+                                        .data(url)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    loading = {
+                                        Box(
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .height(240.dp)
+                                                .background(cs.secondary.copy(alpha = 0.1f))
+                                        )
+                                    },
+                                    error = {
+                                        Box(
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .height(240.dp)
+                                                .background(cs.secondary.copy(alpha = 0.1f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                "Görsel yüklenemedi",
+                                                color = cs.onSurface.copy(alpha = 0.7f),
+                                                fontFamily = FontFamily.Monospace
+                                            )
+                                        }
+                                    },
                                     modifier = Modifier
-                                        .clip(CircleShape)
-                                        .background(cs.primary.copy(alpha = 0.12f))
-                                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Star,
-                                        contentDescription = null,
-                                        tint = cs.primary
-                                    )
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(
-                                        "${post!!.rating}/10",
-                                        color = cs.primary,
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontFamily = FontFamily.Monospace
-                                    )
-                                }
+                                        .fillMaxWidth()
+                                        .height(240.dp)
+                                )
+                                // Alttan hafif karartma (tema uyumlu)
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .background(
+                                            Brush.verticalGradient(
+                                                0f to Color.Transparent,
+                                                0.7f to Color.Transparent,
+                                                1f to cs.scrim.copy(alpha = 0.25f)
+                                            )
+                                        )
+                                )
+                            }
+                        }
 
-                                Spacer(Modifier.width(10.dp))
+                        // DETAY KARTI
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(containerColor = cs.surface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                        ) {
+                            Column(Modifier.padding(16.dp)) {
+                                Text(
+                                    text = post!!.title,
+                                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+                                    color = cs.onSurface,
+                                    fontFamily = FontFamily.Monospace
+                                )
 
-                                // Konum etiketi (varsa)
-                                (post!!.location?.takeIf { it.isNotBlank() })?.let { loc ->
+                                Spacer(Modifier.height(10.dp))
+
+                                // ROZETLER: Puan + Konum
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    // Puan rozeti
                                     Row(
                                         modifier = Modifier
                                             .clip(CircleShape)
-                                            .background(cs.secondaryContainer.copy(alpha = 0.5f))
+                                            .background(cs.primary.copy(alpha = 0.12f))
                                             .padding(horizontal = 10.dp, vertical = 6.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Star,
+                                            contentDescription = null,
+                                            tint = cs.primary
+                                        )
+                                        Spacer(Modifier.width(6.dp))
                                         Text(
-                                            "📍 $loc",
-                                            color = cs.onSecondaryContainer,
+                                            "${post!!.rating}/10",
+                                            color = cs.primary,
                                             style = MaterialTheme.typography.labelLarge,
                                             fontFamily = FontFamily.Monospace
                                         )
                                     }
+
+                                    Spacer(Modifier.width(10.dp))
+
+                                    // Konum etiketi (varsa)
+                                    (post!!.location?.takeIf { it.isNotBlank() })?.let { loc ->
+                                        Row(
+                                            modifier = Modifier
+                                                .clip(CircleShape)
+                                                .background(cs.secondaryContainer.copy(alpha = 0.5f))
+                                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                "📍 $loc",
+                                                color = cs.onSecondaryContainer,
+                                                style = MaterialTheme.typography.labelLarge,
+                                                fontFamily = FontFamily.Monospace
+                                            )
+                                        }
+                                    }
                                 }
-                            }
 
-                            Spacer(Modifier.height(14.dp))
+                                Spacer(Modifier.height(14.dp))
 
-                            // Açıklama
-                            if (!post!!.description.isNullOrBlank()) {
-                                Text(
-                                    text = post!!.description!!,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = cs.onSurface.copy(alpha = 0.9f),
-                                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
-                                )
-                            } else {
-                                Text(
-                                    text = "Açıklama bulunmuyor.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = cs.onSurface.copy(alpha = 0.7f),
-                                    fontFamily = FontFamily.Monospace
-                                )
+                                // Açıklama
+                                if (!post!!.description.isNullOrBlank()) {
+                                    Text(
+                                        text = post!!.description!!,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = cs.onSurface.copy(alpha = 0.9f),
+                                        lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
+                                    )
+                                } else {
+                                    Text(
+                                        text = "Açıklama bulunmuyor.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = cs.onSurface.copy(alpha = 0.7f),
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                }
                             }
                         }
                     }

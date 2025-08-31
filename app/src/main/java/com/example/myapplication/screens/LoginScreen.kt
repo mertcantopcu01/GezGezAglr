@@ -2,6 +2,9 @@ package com.example.myapplication.screens
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -97,7 +100,11 @@ fun LoginScreen(
                             TextButton(
                                 onClick = { showPw = !showPw },
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                            ) { Text(if (showPw) "Gizle" else "Göster") }
+                            ) {
+                                Icon(
+                                    imageVector = if (showPw) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                    contentDescription = if (showPw) "Şifreyi gizle" else "Şifreyi göster"
+                                ) }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = tfColors

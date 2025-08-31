@@ -10,16 +10,15 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -36,7 +35,11 @@ import com.example.myapplication.firebase.FirebaseStorageService
 import com.example.myapplication.firebase.FirestoreService
 import com.example.myapplication.ui.TextFieldStyles
 import com.example.myapplication.ui.AppBackground
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import com.example.myapplication.ui.AppTheme
 
 
 @Composable
@@ -58,12 +61,9 @@ fun RegisterScreen(
     var showPw by remember { mutableStateOf(false) }
     var showPw2 by remember { mutableStateOf(false) }
 
-
     val tfColors = TextFieldStyles.defaultTextFieldColors()
-    val scroll = rememberScrollState()
     val context = LocalContext.current
 
-    // Görsel seçiciler
     val openDocumentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { uri -> selectedImageUri = uri }
@@ -73,56 +73,48 @@ fun RegisterScreen(
         onResult = { uri -> selectedImageUri = uri }
     )
 
-    AppBackground {
-        Box(
+    AppTheme {
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp)
+                .padding(horizontal = 16.dp)
         ) {
-            // Üst başlık
-            Text(
-                text = "GezGezAglr",
-                style = TextStyle(
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 24.sp,
-                    color = if (isDark) Color.White else Color(0xFF0A2742)
-                ),
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 24.dp)
-            )
+            // Yükseklik küçükse compact moda geç
+            val compact = maxHeight < 640.dp
+            val cardTopPad = if (compact) 12.dp else 58.dp
+            val avatarSize = if (compact) 64.dp else 82.dp
+            val avatarIcon = if (compact) 54.dp else 56.dp
+            val fieldSpacer = if (compact) 4.dp else 8.dp
+            val bioHeight = if (compact) 80.dp else 120.dp
+            val btnHeight = if (compact) 44.dp else 48.dp
+            val cardHMargin = 3.dp
 
-            // Kart
+            // Kart: ekrana sığacak maksimum yükseklik
+            val cardMaxHeight = maxHeight
             Card(
                 modifier = Modifier
-                    .align(Alignment.Center)
+                    .align(Alignment.TopCenter)
                     .fillMaxWidth()
-                    .padding(horizontal = 6.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = cs.surface // Light: beyaz, Dark: nötr gri
-                ),
+                    .heightIn(max = cardMaxHeight) // sığdır
+                    .wrapContentHeight()
+                    .padding(top = cardTopPad, start = cardHMargin, end = cardHMargin),
+                colors = CardDefaults.cardColors(containerColor = cs.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
                 shape = RoundedCornerShape(22.dp)
             ) {
                 Column(
                     modifier = Modifier
-                        .verticalScroll(scroll)
-                        .padding(24.dp),
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = if (compact) 12.dp else 16.dp,
+                            vertical = if (compact) 12.dp else 16.dp
+                        ),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = "Kaydol",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = cs.onSurface,
-                        fontFamily = FontFamily.Monospace
-                    )
-
-                    Spacer(Modifier.height(18.dp))
-
-                    // Profil resmi
+                    // Avatar
                     Box(
                         modifier = Modifier
-                            .size(100.dp)
+                            .size(avatarSize)
                             .clip(CircleShape)
                             .border(2.dp, cs.primary.copy(alpha = 0.8f), CircleShape)
                             .clickable {
@@ -138,18 +130,22 @@ fun RegisterScreen(
                             Image(
                                 painter = rememberAsyncImagePainter(selectedImageUri),
                                 contentDescription = "Selected",
-                                modifier = Modifier.fillMaxSize().clip(CircleShape)
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
                             )
                         } else {
                             Image(
                                 painter = painterResource(id = R.drawable.unknown_avatar),
                                 contentDescription = "Default",
-                                modifier = Modifier.size(60.dp).clip(CircleShape)
+                                modifier = Modifier
+                                    .size(avatarIcon)
+                                    .clip(CircleShape)
                             )
                         }
                     }
 
-                    Spacer(Modifier.height(20.dp))
+                    Spacer(Modifier.height(fieldSpacer))
 
                     OutlinedTextField(
                         value = email,
@@ -159,7 +155,7 @@ fun RegisterScreen(
                         modifier = Modifier.fillMaxWidth(),
                         colors = tfColors
                     )
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(fieldSpacer))
 
                     OutlinedTextField(
                         value = username,
@@ -169,7 +165,7 @@ fun RegisterScreen(
                         modifier = Modifier.fillMaxWidth(),
                         colors = tfColors
                     )
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(fieldSpacer))
 
                     OutlinedTextField(
                         value = bio,
@@ -177,10 +173,10 @@ fun RegisterScreen(
                         label = { Text("Bio", color = cs.onSurface.copy(alpha = 0.6f)) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(90.dp),
+                            .height(bioHeight),
                         colors = tfColors
                     )
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(fieldSpacer))
 
                     OutlinedTextField(
                         value = password,
@@ -189,15 +185,18 @@ fun RegisterScreen(
                         singleLine = true,
                         visualTransformation = if (showPw) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
-                            TextButton(
-                                onClick = { showPw = !showPw },
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                            ) { Text(if (showPw) "Gizle" else "Göster") }
+                            IconButton(onClick = { showPw = !showPw }) {
+                                Icon(
+                                    imageVector = if (showPw) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                    contentDescription = if (showPw) "Şifreyi gizle" else "Şifreyi göster"
+                                )
+                            }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = tfColors
                     )
-                    Spacer(Modifier.height(12.dp))
+
+                    Spacer(Modifier.height(fieldSpacer))
 
                     OutlinedTextField(
                         value = confirmPassword,
@@ -206,17 +205,19 @@ fun RegisterScreen(
                         singleLine = true,
                         visualTransformation = if (showPw2) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
-                            TextButton(
-                                onClick = { showPw2 = !showPw2 },
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                            ) { Text(if (showPw2) "Gizle" else "Göster") }
+                            IconButton(onClick = { showPw2 = !showPw2 }) {
+                                Icon(
+                                    imageVector = if (showPw2) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                    contentDescription = if (showPw2) "Şifreyi gizle" else "Şifreyi göster"
+                                )
+                            }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = tfColors
                     )
 
                     if (!errorMessage.isNullOrBlank()) {
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(fieldSpacer))
                         Surface(
                             color = cs.errorContainer,
                             contentColor = cs.onErrorContainer,
@@ -230,7 +231,6 @@ fun RegisterScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(16.dp))
 
                     Button(
                         onClick = {
@@ -257,7 +257,9 @@ fun RegisterScreen(
                                             isLoading = false
                                             errorMessage = "Resim yüklenirken bir hata oluştu."
                                         } else {
-                                            FirestoreService.saveUserProfile(uid, username, bio, imageUrl, password)
+                                            FirestoreService.saveUserProfile(
+                                                uid, username, bio, imageUrl, password
+                                            )
                                             isLoading = false
                                             onRegisterSuccess()
                                         }
@@ -272,7 +274,7 @@ fun RegisterScreen(
                         enabled = !isLoading && email.isNotBlank() && username.isNotBlank() && password.length >= 6,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(52.dp),
+                            .height(btnHeight),
                         shape = MaterialTheme.shapes.medium,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = cs.primary,
@@ -285,14 +287,14 @@ fun RegisterScreen(
                             CircularProgressIndicator(
                                 color = cs.onPrimary,
                                 strokeWidth = 2.dp,
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         } else {
-                            Text("Kaydol", fontSize = 16.sp, fontFamily = FontFamily.Monospace)
+                            Text("Kaydol", fontSize = if (compact) 14.sp else 15.sp, fontFamily = FontFamily.Monospace)
                         }
                     }
 
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(if (compact) 4.dp else 6.dp))
 
                     TextButton(onClick = onNavigateToLogin) {
                         Text(

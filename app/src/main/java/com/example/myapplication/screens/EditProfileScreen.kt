@@ -18,7 +18,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -80,9 +79,7 @@ fun EditProfileScreen(
         }
     }
 
-    // Firestore imzana göre pozisyonel çağrı
     fun saveWithImageUrl(imageUrl: String?) {
-        // saveUserProfile(uid, username, bio, imageUrl, password)
         FirestoreService.saveUserProfile(uid!!, username, bio.ifBlank { "" }, imageUrl, null)
         saving = false
         onSaved()
@@ -94,10 +91,10 @@ fun EditProfileScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            "• Profili Düzenle",
+                            "Profili Düzenle",
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            color = cs.onPrimary
                         )
                     },
                     navigationIcon = {
@@ -105,7 +102,7 @@ fun EditProfileScreen(
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Geri",
-                                tint = Color.White
+                                tint = cs.onPrimary
                             )
                         }
                     },
@@ -133,16 +130,18 @@ fun EditProfileScreen(
                             },
                             enabled = !saving && uid != null && username.isNotBlank()
                         ) {
-                            Icon(Icons.Filled.Check, contentDescription = "Kaydet", tint = Color.White)
+                            Icon(Icons.Filled.Check, contentDescription = "Kaydet", tint = cs.onPrimary)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        titleContentColor = Color.White
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = cs.onPrimary,
+                        navigationIconContentColor = cs.onPrimary,
+                        actionIconContentColor = cs.onPrimary
                     )
                 )
             },
-            containerColor = Color.Transparent
+            containerColor = cs.background
         ) { padding ->
             Box(
                 modifier = Modifier
@@ -180,7 +179,7 @@ fun EditProfileScreen(
                                         Modifier
                                             .size(110.dp)
                                             .clip(CircleShape)
-                                            .background(cs.secondary.copy(0.2f))
+                                            .background(cs.secondary.copy(alpha = 0.2f))
                                     )
                                 },
                                 error = {
@@ -188,7 +187,7 @@ fun EditProfileScreen(
                                         Modifier
                                             .size(110.dp)
                                             .clip(CircleShape)
-                                            .background(cs.secondary.copy(0.2f))
+                                            .background(cs.secondary.copy(alpha = 0.2f))
                                     )
                                 },
                                 modifier = Modifier
@@ -231,7 +230,7 @@ fun EditProfileScreen(
                             OutlinedTextField(
                                 value = username,
                                 onValueChange = { username = it },
-                                label = { Text("Kullanıcı adı") },
+                                label = { Text("Kullanıcı adı", color = cs.onSurface.copy(alpha = 0.7f)) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = tfColors
@@ -242,7 +241,7 @@ fun EditProfileScreen(
                             OutlinedTextField(
                                 value = bio,
                                 onValueChange = { bio = it },
-                                label = { Text("Bio (isteğe bağlı)") },
+                                label = { Text("Bio (isteğe bağlı)", color = cs.onSurface.copy(alpha = 0.7f)) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(100.dp),
@@ -298,7 +297,13 @@ fun EditProfileScreen(
                                     },
                                     enabled = !saving && username.isNotBlank(),
                                     modifier = Modifier.weight(1f),
-                                    shape = MaterialTheme.shapes.medium
+                                    shape = MaterialTheme.shapes.medium,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = cs.primary,
+                                        contentColor = cs.onPrimary,
+                                        disabledContainerColor = cs.primary.copy(alpha = 0.4f),
+                                        disabledContentColor = cs.onPrimary.copy(alpha = 0.7f)
+                                    )
                                 ) {
                                     if (saving) {
                                         CircularProgressIndicator(
