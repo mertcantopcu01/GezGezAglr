@@ -10,20 +10,22 @@ import com.example.myapplication.firebase.AuthService
 import com.example.myapplication.screens.*
 
 object Routes {
-    const val LOGIN         = "login"
-    const val REGISTER      = "register"
-    const val HOME          = "home"
-    const val USER_PROFILE  = "user_profile"
-    const val SEARCH        = "search"
-    const val CREATE_POST   = "create_post"
-    const val POST_DETAIL   = "post_detail"
-    const val FOLLOWERS_LIST  = "followers_list"
-    const val FOLLOWING_LIST  = "following_list"
+    const val LOGIN          = "login"
+    const val REGISTER       = "register"
+    const val HOME           = "home"
+    const val USER_PROFILE   = "user_profile"
+    const val SEARCH         = "search"
+    const val CREATE_POST    = "create_post"
+    const val POST_DETAIL    = "post_detail"
+    const val FOLLOWERS_LIST = "followers_list"
+    const val FOLLOWING_LIST = "following_list"
+    const val EDIT_PROFILE   = "edit_profile"
 }
 
 @Composable
 fun AppNavGraph(navController: NavHostController, startDestination: String) {
     NavHost(navController = navController, startDestination = startDestination) {
+
         // — Home
         composable(Routes.HOME) {
             HomeScreen(
@@ -43,7 +45,7 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
             )
         }
 
-
+        // — Login
         composable(Routes.LOGIN) {
             LoginScreen(
                 onLoginSuccess = {
@@ -51,13 +53,11 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 },
-                onNavigateToRegister = {
-                    navController.navigate(Routes.REGISTER)
-                }
+                onNavigateToRegister = { navController.navigate(Routes.REGISTER) }
             )
         }
 
-
+        // — Register
         composable(Routes.REGISTER) {
             RegisterScreen(
                 onRegisterSuccess = { navController.popBackStack() },
@@ -65,54 +65,59 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
             )
         }
 
-
+        // — Create Post
         composable(Routes.CREATE_POST) {
             CreatePostScreen(onPostCreated = { navController.popBackStack() })
         }
 
-
+        // — Search
         composable(Routes.SEARCH) {
             SearchScreen(onUserSelected = { userId ->
                 navController.navigate("${Routes.USER_PROFILE}/$userId")
             })
         }
 
-
+        // — User Profile
         composable(
             route = "${Routes.USER_PROFILE}/{userId}",
-            arguments = listOf(navArgument("userId") {
-                type = NavType.StringType
-            })
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
         ) { backStack ->
             val userId = backStack.arguments!!.getString("userId")!!
             UserProfileScreen(
-                userId            = userId,
-                onPostClick       = { postId -> navController.navigate("${Routes.POST_DETAIL}/$postId") },
-                onFollowersClick  = { navController.navigate("${Routes.FOLLOWERS_LIST}/$userId") },
-                onFollowingClick  = { navController.navigate("${Routes.FOLLOWING_LIST}/$userId") },
+                userId           = userId,
+                onPostClick      = { postId -> navController.navigate("${Routes.POST_DETAIL}/$postId") },
+                onFollowersClick = { navController.navigate("${Routes.FOLLOWERS_LIST}/$userId") },
+                onFollowingClick = { navController.navigate("${Routes.FOLLOWING_LIST}/$userId") },
                 onCreatePost     = { navController.navigate(Routes.CREATE_POST) },
-                onLogout = {
+                onLogout         = {
                     AuthService.signOut()
                     navController.navigate(Routes.LOGIN) {
-                        popUpTo(navController.graph.startDestinationId) {
-                            inclusive = true
-                        }
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
                     }
-                }
+                },
+                onEditProfile    = { navController.navigate(Routes.EDIT_PROFILE) }, // ✅ buraya eklendi
+                onBack           = { navController.popBackStack() }
+            )
+        }
+
+        // — Edit Profile
+        composable(Routes.EDIT_PROFILE) {
+            EditProfileScreen(
+                onSaved = { navController.popBackStack() },
+                onCancel = { navController.popBackStack() }
             )
         }
 
         // — Post Detail
         composable(
             route = "${Routes.POST_DETAIL}/{postId}",
-            arguments = listOf(navArgument("postId") {
-                type = NavType.StringType
-            })
+            arguments = listOf(navArgument("postId") { type = NavType.StringType })
         ) { backStack ->
             val postId = backStack.arguments!!.getString("postId")!!
             PostDetailScreen(postId = postId)
         }
 
+        // — Followers
         composable(
             route = "${Routes.FOLLOWERS_LIST}/{userId}",
             arguments = listOf(navArgument("userId") { type = NavType.StringType })
@@ -127,6 +132,7 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
             )
         }
 
+        // — Following
         composable(
             route = "${Routes.FOLLOWING_LIST}/{userId}",
             arguments = listOf(navArgument("userId"){ type = NavType.StringType })

@@ -1,179 +1,159 @@
-// LoginScreen.kt
 package com.example.myapplication.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.myapplication.R
 import com.example.myapplication.firebase.AuthService
 import com.example.myapplication.ui.TextFieldStyles
+import com.example.myapplication.ui.AppBackground
 
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onNavigateToRegister: () -> Unit
 ) {
-    val isDarkTheme = isSystemInDarkTheme()
-    val colors = MaterialTheme.colorScheme
+    val cs = MaterialTheme.colorScheme
+    val isDark = isSystemInDarkTheme()
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+    var showPw by remember { mutableStateOf(false) }
 
-    // TextField renklerini, kendi TextFieldStyles sınıfınızla belirleyebilirsiniz
     val tfColors = TextFieldStyles.defaultTextFieldColors()
 
-    // Arka plan için kullanılacak degradeli boya (mavi → yeşil)
-    val backgroundGradient = Brush.linearGradient(
-        colors = listOf(
-            colorResource(id = R.color.blue_900),
-            colorResource(id = R.color.green_800)
-        ),
-        start = Offset(0f, 0f),
-        end = Offset(0f, Float.POSITIVE_INFINITY)
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(backgroundGradient)
-    ) {
-        Column(
+    AppBackground {
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(20.dp)
         ) {
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // E-posta Alanı
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = {
-                    Text(
-                        text = stringResource(R.string.email),
-                        color = colors.onSurface.copy(alpha = 0.6f)
-                    )
-                },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                colors = tfColors
+            // Üst başlık
+            Text(
+                text = "GezGezAglr",
+                style = TextStyle(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 24.sp,
+                    color = if (isDark) Color.White else Color(0xFF0A2742)
+                ),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 24.dp)
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Şifre Alanı
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = {
+            // Kart
+            Card(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = cs.surface // Light: beyaz, Dark: nötr gri
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
-                        text = stringResource(R.string.password),
-                        color = colors.onSurface.copy(alpha = 0.6f)
+                        text = "Giriş Yap",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = cs.onSurface,
+                        fontFamily = FontFamily.Monospace
                     )
-                },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
-                colors = tfColors
-            )
 
-            Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(Modifier.height(18.dp))
 
-            // Giriş Yap Butonu
-            Button(
-                onClick = {
-                    isLoading = true
-                    AuthService.loginUser(email, password) { success, error ->
-                        isLoading = false
-                        if (success) {
-                            onLoginSuccess()
-                        } else {
-                            errorMessage = error
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it; errorMessage = null },
+                        label = { Text("E-posta") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = tfColors
+                    )
+
+                    Spacer(Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it; errorMessage = null },
+                        label = { Text("Şifre") },
+                        singleLine = true,
+                        visualTransformation = if (showPw) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            TextButton(
+                                onClick = { showPw = !showPw },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                            ) { Text(if (showPw) "Gizle" else "Göster") }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = tfColors
+                    )
+
+                    if (!errorMessage.isNullOrBlank()) {
+                        Spacer(Modifier.height(10.dp))
+                        Surface(
+                            color = cs.errorContainer,
+                            contentColor = cs.onErrorContainer,
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Text(
+                                text = errorMessage!!,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontFamily = FontFamily.Monospace
+                            )
                         }
                     }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                shape = MaterialTheme.shapes.medium,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = colorResource(id = R.color.blue_800),
-                    contentColor = colorResource(id = R.color.blue_800)
-                )
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        color = colors.onPrimary,
-                        strokeWidth = 2.dp,
-                        modifier = Modifier.size(20.dp)
-                    )
-                } else {
-                    Text(
-                        text = stringResource(R.string.login_in),
-                        fontSize = 16.sp,
-                        color = colors.onPrimary
-                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Button(
+                        onClick = {
+                            isLoading = true
+                            errorMessage = null
+                            AuthService.loginUser(email, password) { ok, err ->
+                                isLoading = false
+                                if (ok) onLoginSuccess() else errorMessage = err ?: "Giriş başarısız"
+                            }
+                        },
+                        enabled = email.isNotBlank() && password.length >= 6 && !isLoading,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(22.dp),
+                                color = cs.onPrimary
+                            )
+                        } else {
+                            Text("Giriş Yap", fontSize = 16.sp, fontFamily = FontFamily.Monospace)
+                        }
+                    }
+
+                    Spacer(Modifier.height(10.dp))
+
+                    TextButton(onClick = onNavigateToRegister) {
+                        Text("Kaydol", style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace)
+                    }
                 }
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Kayıt Ol TextButton
-            TextButton(onClick = onNavigateToRegister) {
-                Text(
-                    text = stringResource(R.string.no_account_get_register),
-                    color = colorResource(R.color.yellow),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
-            // Hata Mesajı
-            errorMessage?.let { msg ->
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = msg,
-                    color = colors.error,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
         }
-    }
-}
-
-@Preview(showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_NO)
-@Composable
-fun PreviewLoginScreen_Light() {
-    MaterialTheme {
-        LoginScreen(
-            onLoginSuccess = {},
-            onNavigateToRegister = {}
-        )
-    }
-}
-
-@Preview(showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
-@Composable
-fun PreviewLoginScreen_Dark() {
-    MaterialTheme {
-        LoginScreen(
-            onLoginSuccess = {},
-            onNavigateToRegister = {}
-        )
     }
 }
