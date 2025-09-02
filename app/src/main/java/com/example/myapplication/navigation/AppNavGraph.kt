@@ -14,7 +14,6 @@ object Routes {
     const val REGISTER       = "register"
     const val HOME           = "home"
     const val USER_PROFILE   = "user_profile"
-    const val SEARCH         = "search"
     const val CREATE_POST    = "create_post"
     const val POST_DETAIL    = "post_detail"
     const val FOLLOWERS_LIST = "followers_list"
@@ -26,26 +25,19 @@ object Routes {
 fun AppNavGraph(navController: NavHostController, startDestination: String) {
     NavHost(navController = navController, startDestination = startDestination) {
 
-        // — Home
+        // HOME (bottom tab'ler içeride)
         composable(Routes.HOME) {
-            HomeScreen(
-                onNavigateToProfile = {
-                    AuthService.getCurrentUser()?.uid
-                        ?.let { navController.navigate("${Routes.USER_PROFILE}/$it") }
-                },
-                onNavigateToSearch = {
-                    navController.navigate(Routes.SEARCH)
-                },
-                onUserClick = { userId ->
-                    navController.navigate("${Routes.USER_PROFILE}/$userId")
-                },
-                onPostClick = { postId ->
+            MainTabs(
+                onOpenPost = { postId ->
                     navController.navigate("${Routes.POST_DETAIL}/$postId")
+                },
+                onOpenUser = { userId ->
+                    navController.navigate("${Routes.USER_PROFILE}/$userId")
                 }
             )
         }
 
-        // — Login
+        // LOGIN
         composable(Routes.LOGIN) {
             LoginScreen(
                 onLoginSuccess = {
@@ -57,7 +49,7 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
             )
         }
 
-        // — Register
+        // REGISTER
         composable(Routes.REGISTER) {
             RegisterScreen(
                 onRegisterSuccess = { navController.popBackStack() },
@@ -65,7 +57,7 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
             )
         }
 
-        // — Create Post
+        // CREATE POST
         composable(Routes.CREATE_POST) {
             CreatePostScreen(
                 onPostCreated = { navController.popBackStack() },
@@ -73,17 +65,7 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
             )
         }
 
-        // — Search
-        composable(Routes.SEARCH) {
-            SearchScreen(
-                onUserSelected = { userId ->
-                    navController.navigate("${Routes.USER_PROFILE}/$userId")
-                },
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        // — User Profile
+        // USER PROFILE
         composable(
             route = "${Routes.USER_PROFILE}/{userId}",
             arguments = listOf(navArgument("userId") { type = NavType.StringType })
@@ -92,8 +74,8 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
             UserProfileScreen(
                 userId           = userId,
                 onPostClick      = { postId -> navController.navigate("${Routes.POST_DETAIL}/$postId") },
-                onFollowersClick = { navController.navigate("${Routes.FOLLOWERS_LIST}/$userId") },
-                onFollowingClick = { navController.navigate("${Routes.FOLLOWING_LIST}/$userId") },
+                onFollowersClick = { uid -> navController.navigate("${Routes.FOLLOWERS_LIST}/$uid") },
+                onFollowingClick = { uid -> navController.navigate("${Routes.FOLLOWING_LIST}/$uid") },
                 onCreatePost     = { navController.navigate(Routes.CREATE_POST) },
                 onLogout         = {
                     AuthService.signOut()
@@ -101,12 +83,12 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
                         popUpTo(navController.graph.startDestinationId) { inclusive = true }
                     }
                 },
-                onEditProfile    = { navController.navigate(Routes.EDIT_PROFILE) }, // ✅ buraya eklendi
+                onEditProfile    = { navController.navigate(Routes.EDIT_PROFILE) },
                 onBack           = { navController.popBackStack() }
             )
         }
 
-        // — Edit Profile
+        // EDIT PROFILE
         composable(Routes.EDIT_PROFILE) {
             EditProfileScreen(
                 onSaved = { navController.popBackStack() },
@@ -114,7 +96,7 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
             )
         }
 
-        // — Post Detail
+        // POST DETAIL
         composable(
             route = "${Routes.POST_DETAIL}/{postId}",
             arguments = listOf(navArgument("postId") { type = NavType.StringType })
@@ -126,7 +108,7 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
             )
         }
 
-        // — Followers
+        // FOLLOWERS
         composable(
             route = "${Routes.FOLLOWERS_LIST}/{userId}",
             arguments = listOf(navArgument("userId") { type = NavType.StringType })
@@ -141,7 +123,7 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
             )
         }
 
-        // — Following
+        // FOLLOWING
         composable(
             route = "${Routes.FOLLOWING_LIST}/{userId}",
             arguments = listOf(navArgument("userId"){ type = NavType.StringType })
