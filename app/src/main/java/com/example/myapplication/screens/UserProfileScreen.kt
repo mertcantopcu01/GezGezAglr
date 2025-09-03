@@ -1,38 +1,28 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
 package com.example.myapplication.screens
 
-import android.content.Context
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.FractionalThreshold
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material.rememberSwipeableState
-import androidx.compose.material.swipeable
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
@@ -42,16 +32,7 @@ import com.example.myapplication.firebase.Post
 import com.example.myapplication.firebase.UserProfile
 import com.example.myapplication.ui.AppBackground
 import com.example.myapplication.ui.AppThemeColors
-import kotlinx.coroutines.delay
-import kotlin.math.roundToInt
 
-// Swipeable kartın 2 hali
-enum class CardPos { Closed, Revealed }
-
-@OptIn(
-    ExperimentalMaterial3Api::class,
-    ExperimentalFoundationApi::class
-)
 @Composable
 fun UserProfileScreen(
     userId: String,
@@ -59,7 +40,7 @@ fun UserProfileScreen(
     onPostClick: (String) -> Unit,
     onFollowersClick: (String) -> Unit,
     onFollowingClick: (String) -> Unit,
-    onLogout: () -> Unit,
+    onLogout: () -> Unit,           // imza korunuyor
     onEditProfile: () -> Unit,
     onBack: (() -> Unit)? = null
 ) {
@@ -72,12 +53,8 @@ fun UserProfileScreen(
     var isFollowing by remember { mutableStateOf(false) }
     var followersCount by remember { mutableStateOf(0) }
     var followingCount by remember { mutableStateOf(0) }
+    var tabIndex by remember { mutableStateOf(0) } // 0: Gönderiler, 1: Kaydedilenler
 
-    var postToDelete by remember { mutableStateOf<Post?>(null) }
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    var hasPeeked by rememberSaveable(userId) { mutableStateOf(false) }
-
-    // Veri yükle
     LaunchedEffect(userId) {
         FirestoreService.getUserProfile(userId) { profile = it }
         FirestoreService.getUserPosts(userId) { posts = it }
@@ -88,45 +65,24 @@ fun UserProfileScreen(
         }
     }
 
-    // Silme onayı
-    if (showDeleteDialog && postToDelete != null) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Gönderiyi Sil", fontFamily = FontFamily.Monospace, color = cs.onSurface) },
-            text  = { Text("Bu gönderiyi silmek istediğinize emin misiniz?", color = cs.onSurface) },
-            confirmButton = {
-                TextButton(onClick = {
-                    FirestoreService.deletePost(postToDelete!!.postId) { success ->
-                        if (success) posts = posts.filterNot { it.postId == postToDelete!!.postId }
-                        postToDelete = null
-                        showDeleteDialog = false
-                    }
-                }) { Text("Evet", color = cs.error) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Hayır", color = cs.primary) }
-            },
-            containerColor = cs.surface
-        )
-    }
-
     AppBackground {
         Scaffold(
             topBar = {
-                TopAppBar(
+                CenterAlignedTopAppBar(
                     title = {
                         Text(
-                            profile?.username ?: "Profil",
+                            text = profile?.username ?: "Profil",
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.SemiBold,
-                            color = AppThemeColors.extra.onTopBar
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     },
                     navigationIcon = {
                         onBack?.let {
                             IconButton(onClick = it) {
                                 Icon(
-                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Geri",
                                     tint = AppThemeColors.extra.onTopBar
                                 )
@@ -135,15 +91,16 @@ fun UserProfileScreen(
                     },
                     actions = {
                         if (currentUserId == userId) {
-                            IconButton(onClick = {
-                                AuthService.signOut()
-                                onLogout()
-                            }) {
-                                Icon(Icons.Filled.ExitToApp, contentDescription = "Çıkış", tint = AppThemeColors.extra.onTopBar)
+                            IconButton(onClick = onEditProfile) {
+                                Icon(
+                                    imageVector = Icons.Filled.Edit,
+                                    contentDescription = "Profili Düzenle",
+                                    tint = AppThemeColors.extra.onTopBar
+                                )
                             }
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                         containerColor = AppThemeColors.extra.topBar,
                         titleContentColor = AppThemeColors.extra.onTopBar,
                         navigationIconContentColor = AppThemeColors.extra.onTopBar,
@@ -153,51 +110,98 @@ fun UserProfileScreen(
             },
             containerColor = cs.background
         ) { padding ->
-            Box(Modifier.fillMaxSize().padding(padding)) {
-                if (profile == null) {
-                    CircularProgressIndicator(Modifier.align(Alignment.Center), color = cs.primary)
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        // HEADER
-                        item {
-                            ProfileHeader(
-                                profile!!,
-                                cs,
-                                userId,
-                                currentUserId,
-                                followersCount,
-                                followingCount,
-                                isFollowing,
-                                onFollowersClick,
-                                onFollowingClick,
-                                onCreatePost,
-                                onEditProfile,
-                                { new -> isFollowing = new },
-                                { new -> followersCount = new }
-                            )
-                        }
 
-                        // POSTS
-                        itemsIndexed(posts, key = { _, it -> it.postId }) { index, post ->
-                            val isMine = currentUserId == userId
-                            val shouldPeek = isMine && !hasPeeked && index == 0
-                            RevealDismissPostCard(
-                                post = post,
-                                cs = cs,
-                                isMine = isMine,
-                                onClick = { onPostClick(post.postId) },
-                                onRequestDelete = {
-                                    postToDelete = post
-                                    showDeleteDialog = true
-                                },
-                                ctx = ctx,
-                                doPeek = shouldPeek,
-                                onPeekDone = { hasPeeked = true }
+            if (profile == null) {
+                Box(Modifier.fillMaxSize().padding(padding)) {
+                    CircularProgressIndicator(Modifier.align(Alignment.Center), color = cs.primary)
+                }
+                return@Scaffold
+            }
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentPadding = PaddingValues(bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Header
+                item(span = { GridItemSpan(maxCurrentLineSpan) }) {
+                    ProfileHeaderBlock(
+                        profile = profile!!,
+                        postsCount = posts.size,
+                        followersCount = followersCount,
+                        followingCount = followingCount,
+                        isOwn = currentUserId == userId,
+                        isFollowing = isFollowing,
+                        onToggleFollow = {
+                            val me = currentUserId ?: return@ProfileHeaderBlock
+                            if (isFollowing) {
+                                FirestoreService.unfollowUser(me, userId) { ok, _ ->
+                                    if (ok) {
+                                        isFollowing = false
+                                        followersCount = (followersCount - 1).coerceAtLeast(0)
+                                    }
+                                }
+                            } else {
+                                FirestoreService.followUser(me, userId) { ok, _ ->
+                                    if (ok) {
+                                        isFollowing = true
+                                        followersCount += 1
+                                    }
+                                }
+                            }
+                        },
+                        onFollowersClick = { onFollowersClick(userId) },
+                        onFollowingClick = { onFollowingClick(userId) },
+                        onEditProfile = onEditProfile,
+                        onCreatePost = onCreatePost
+                    )
+                }
+
+                // Tabs
+                item(span = { GridItemSpan(maxCurrentLineSpan) }) {
+                    TabRow(
+                        selectedTabIndex = tabIndex,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        containerColor = cs.background,
+                        contentColor = cs.primary
+                    ) {
+                        Tab(
+                            selected = tabIndex == 0,
+                            onClick = { tabIndex = 0 },
+                            text = { Text("Gönderiler") }
+                        )
+                        Tab(
+                            selected = tabIndex == 1,
+                            onClick = { tabIndex = 1 },
+                            text = { Text("Kaydedilenler") }
+                        )
+                    }
+                }
+
+                if (tabIndex == 0) {
+                    items(posts, key = { it.postId }) { post ->
+                        PostGridItem(
+                            url = post.photoUrl,
+                            onClick = { onPostClick(post.postId) }
+                        )
+                    }
+                } else {
+                    item(span = { GridItemSpan(maxCurrentLineSpan) }) {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "Kaydedilenler yakında",
+                                color = cs.onBackground.copy(alpha = 0.6f)
                             )
                         }
                     }
@@ -208,198 +212,179 @@ fun UserProfileScreen(
 }
 
 @Composable
-private fun ProfileHeader(
+private fun ProfileHeaderBlock(
     profile: UserProfile,
-    cs: ColorScheme,
-    userId: String,
-    currentUserId: String?,
+    postsCount: Int,
     followersCount: Int,
     followingCount: Int,
+    isOwn: Boolean,
     isFollowing: Boolean,
-    onFollowersClick: (String) -> Unit,
-    onFollowingClick: (String) -> Unit,
-    onCreatePost: () -> Unit,
+    onToggleFollow: () -> Unit,
+    onFollowersClick: () -> Unit,
+    onFollowingClick: () -> Unit,
     onEditProfile: () -> Unit,
-    updateFollowing: (Boolean) -> Unit,
-    updateFollowersCount: (Int) -> Unit
+    onCreatePost: () -> Unit
 ) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = cs.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        shape = MaterialTheme.shapes.large
+    val cs = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .background(color = cs.background),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            SubcomposeAsyncImage(
-                model = profile.profileImageUrl,
-                contentDescription = "Avatar",
-                contentScale = ContentScale.Crop,
-                loading = {
-                    Box(Modifier.size(96.dp).clip(CircleShape).background(cs.secondary.copy(alpha = 0.2f)))
-                },
-                error = {
-                    Box(Modifier.size(96.dp).clip(CircleShape).background(cs.secondary.copy(alpha = 0.2f)))
-                },
-                modifier = Modifier.size(96.dp).clip(CircleShape)
+        // Avatar
+        val ctx = LocalContext.current
+        SubcomposeAsyncImage(
+            model = ImageRequest.Builder(ctx).data(profile.profileImageUrl).crossfade(true).build(),
+            contentDescription = "Avatar",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(96.dp)
+                .clip(CircleShape)
+        )
+
+        Spacer(Modifier.height(10.dp))
+
+        Text(
+            text = profile.username,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = cs.onBackground,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        profile.username.takeIf { it.isNotBlank() }?.let {
+            val handle = "@${it.lowercase().replace(' ', '.')}"
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = handle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = cs.onBackground.copy(alpha = 0.75f)
             )
+        }
 
-            Spacer(Modifier.height(10.dp))
-            Text(profile.username, style = MaterialTheme.typography.titleLarge, fontFamily = FontFamily.Monospace, color = cs.onSurface)
-            profile.bio?.takeIf { it.isNotBlank() }?.let {
-                Spacer(Modifier.height(6.dp))
-                Text(it, style = MaterialTheme.typography.bodyMedium, color = cs.onSurface.copy(alpha = 0.8f))
+        profile.bio?.takeIf { it.isNotBlank() }?.let {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = cs.onBackground.copy(alpha = 0.85f)
+            )
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        // İstatistikler
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            StatButton(value = postsCount.compact(), label = "Gönderi", onClick = null)
+            StatButton(value = followersCount.compact(), label = "Takipçi", onClick = onFollowersClick)
+            StatButton(value = followingCount.compact(), label = "Takip", onClick = onFollowingClick)
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        if (isOwn) {
+            OutlinedButton(
+                onClick = onEditProfile,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Text("Profili Düzenle")
             }
-
-            Spacer(Modifier.height(12.dp))
-
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                StatItem("$followersCount", "Takipçi", cs, onClick = { onFollowersClick(userId) })
-                StatItem("$followingCount", "Takip Edilen", cs, onClick = { onFollowingClick(userId) })
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onCreatePost,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Text("Gönderi Paylaş")
             }
-
-            Spacer(Modifier.height(12.dp))
-
-            if (currentUserId == userId) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(onClick = onCreatePost, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Default.Add, contentDescription = null)
-                        Spacer(Modifier.width(6.dp))
-                        Text("Gönderi Paylaş", fontFamily = FontFamily.Monospace)
-                    }
-                    OutlinedButton(onClick = onEditProfile, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Filled.Edit, contentDescription = null)
-                        Spacer(Modifier.width(6.dp))
-                        Text("Profili Düzenle", fontFamily = FontFamily.Monospace)
-                    }
-                }
-            } else if (currentUserId != null) {
-                Button(
-                    onClick = {
-                        if (isFollowing) {
-                            FirestoreService.unfollowUser(currentUserId, userId) { ok, _ ->
-                                if (ok) { updateFollowing(false); updateFollowersCount(followersCount - 1) }
-                            }
-                        } else {
-                            FirestoreService.followUser(currentUserId, userId) { ok, _ ->
-                                if (ok) { updateFollowing(true); updateFollowersCount(followersCount + 1) }
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(if (isFollowing) "Takipten Çık" else "Takip Et", fontFamily = FontFamily.Monospace)
-                }
+        } else {
+            Button(
+                onClick = onToggleFollow,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(46.dp),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Text(if (isFollowing) "Takipten Çık" else "Takip Et")
             }
         }
+
+        Spacer(Modifier.height(8.dp))
     }
 }
 
 @Composable
-private fun StatItem(value: String, label: String, cs: ColorScheme, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(onClick = onClick)) {
-        Text(value, style = MaterialTheme.typography.titleMedium, fontFamily = FontFamily.Monospace, color = cs.onSurface)
-        Text(label, style = MaterialTheme.typography.bodySmall, color = cs.onSurface.copy(0.7f))
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterialApi::class)
-@Composable
-fun RevealDismissPostCard(
-    post: Post,
-    cs: ColorScheme,
-    isMine: Boolean,
-    onClick: () -> Unit,
-    onRequestDelete: () -> Unit,
-    ctx: Context,
-    doPeek: Boolean = false,
-    onPeekDone: () -> Unit = {}
+private fun StatButton(
+    value: String,
+    label: String,
+    onClick: (() -> Unit)?
 ) {
-    if (!isMine) {
-        Card(
-            colors = CardDefaults.cardColors(containerColor = cs.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            shape = MaterialTheme.shapes.large,
-            modifier = Modifier.fillMaxWidth().clickable { onClick() }
-        ) { PostContent(post, cs, ctx) }
-        return
-    }
-
-    val density = LocalDensity.current
-    val revealPx = with(density) { 32.dp.toPx() }
-    var widthPx by remember { mutableStateOf(0f) }
-    val swipeState = rememberSwipeableState(CardPos.Closed)
-
-    val anchors = mapOf(0f to CardPos.Closed, -revealPx to CardPos.Revealed)
-
-    LaunchedEffect(doPeek) {
-        if (doPeek) {
-            swipeState.snapTo(CardPos.Closed)
-            swipeState.animateTo(CardPos.Revealed)
-            delay(650)
-            swipeState.animateTo(CardPos.Closed)
-            onPeekDone()
+    val cs = MaterialTheme.colorScheme
+    Surface(
+        modifier = Modifier
+            .clip(MaterialTheme.shapes.medium)
+            .clickable(enabled = onClick != null, role = Role.Button) { onClick?.invoke() }
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .defaultMinSize(minWidth = 84.dp),
+        color = androidx.compose.ui.graphics.Color.Transparent,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = cs.onBackground
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = cs.onBackground.copy(alpha = 0.7f)
+            )
         }
     }
+}
+
+@Composable
+private fun PostGridItem(url: String?, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val ctx = LocalContext.current
 
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .onGloballyPositioned { widthPx = it.size.width.toFloat() }
-            .height(IntrinsicSize.Min)
+            .aspectRatio(1f)
+            .clip(MaterialTheme.shapes.small)
+            .background(cs.surfaceVariant.copy(alpha = 0.25f))
+            .clickable(onClick = onClick)
     ) {
-        // Arka plan: sil ikonu
-        Box(
-            modifier = Modifier.matchParentSize().clip(MaterialTheme.shapes.large).background(cs.surface)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Delete,
-                contentDescription = "Sil",
-                tint = cs.error,
-                modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp).clickable(onClick = onRequestDelete)
-            )
-        }
-
-        // Ön plan: kart
-        Card(
-            colors = CardDefaults.cardColors(containerColor = cs.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            shape = MaterialTheme.shapes.large,
-            modifier = Modifier
-                .fillMaxWidth()
-                .offset { IntOffset(swipeState.offset.value.roundToInt(), 0) }
-                .swipeable(
-                    state = swipeState,
-                    anchors = anchors,
-                    thresholds = { _, _ -> FractionalThreshold(0.3f) },
-                    orientation = Orientation.Horizontal,
-                    reverseDirection = false,
-                    resistance = null
-                )
-                .combinedClickable(
-                    onClick = onClick,
-                    onLongClick = onRequestDelete
-                )
-        ) { PostContent(post, cs, ctx) }
-    }
-}
-
-@Composable
-private fun PostContent(post: Post, cs: ColorScheme, ctx: Context) {
-    Column(Modifier.padding(16.dp)) {
-        Text(post.title, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontFamily = FontFamily.Monospace)
-        post.photoUrl?.let { url ->
-            Spacer(Modifier.height(10.dp))
+        if (url != null) {
             SubcomposeAsyncImage(
                 model = ImageRequest.Builder(ctx).data(url).crossfade(true).build(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                loading = { Box(Modifier.fillMaxWidth().height(180.dp).background(cs.secondary.copy(alpha = 0.1f))) },
-                error = {
-                    Box(Modifier.fillMaxWidth().height(180.dp).background(cs.secondary.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
-                        Text("Görsel yüklenemedi", color = cs.onSurface.copy(0.7f))
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().height(180.dp).clip(MaterialTheme.shapes.medium)
+                modifier = Modifier.matchParentSize()
             )
         }
+    }
+}
+
+private fun Int.compact(): String {
+    val n = this
+    return when {
+        n >= 1_000_000 -> String.format("%.1fM", n / 1_000_000f).trimEnd('0').trimEnd('.')
+        n >= 1_000     -> String.format("%.1fK", n / 1_000f).trimEnd('0').trimEnd('.')
+        else           -> n.toString()
     }
 }

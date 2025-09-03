@@ -45,59 +45,41 @@ android {
 }
 
 dependencies {
+    // Ücretsiz harita + konum + görsel
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+    implementation("io.coil-kt:coil-compose:2.7.0")
 
+    // Compose BOM (tüm compose versiyonlarını buradan yönet)
+    implementation(platform("androidx.compose:compose-bom:2024.09.00"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material")
+    implementation("androidx.compose.material:material-icons-extended")
+    debugImplementation("androidx.compose.ui:ui-tooling")
 
+    // Compose Activity & Navigation
+    implementation("androidx.activity:activity-compose:1.8.2")
+    implementation(libs.compose.navigation) // versiyon kataloğundan kullanmaya devam et
 
+    // AndroidX & Material (XML tarafı)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
-    implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
-    implementation(libs.androidx.compose.material)
-    implementation(libs.play.services.location)
+    implementation(libs.androidx.activity) // varsa kalsın
+
+    // Accompanist (opsiyonel)
+    implementation("com.google.accompanist:accompanist-swiperefresh:0.30.1")
+
+    // Firebase — TEK BOM
+    implementation(platform("com.google.firebase:firebase-bom:32.8.1"))
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-storage-ktx")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-
-
-    implementation(libs.compose.ui)
-    implementation(libs.compose.ui.tooling.preview)
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.runtime:runtime")
-    implementation("androidx.activity:activity-compose:1.8.2")
-    implementation("io.coil-kt:coil-compose:2.5.0")
-    implementation ("com.google.accompanist:accompanist-swiperefresh:0.30.1")
-    implementation("androidx.compose.material:material-icons-extended")
-
-
-
-
-
-    implementation(libs.compose.navigation)
-
-    implementation(platform(libs.firebase.bom))
-
-    implementation(libs.firebase.auth)
-
-    // Firebase BoM (Bill of Materials)
-    implementation(platform("com.google.firebase:firebase-bom:32.8.1"))
-    implementation("com.google.firebase:firebase-storage-ktx:20.3.0")
-
-    // Firestore
-    implementation("com.google.firebase:firebase-firestore-ktx")
-
-    // Firebase Authentication
-    implementation("com.google.firebase:firebase-auth-ktx")
-
-    implementation(platform("androidx.compose:compose-bom:2024.09.00"))
-    implementation("androidx.compose.material:material")
-    implementation("com.google.android.gms:play-services-location:21.3.0")
-
-
-
-
-
-
-
-    debugImplementation("androidx.compose.ui:ui-tooling")
 }
