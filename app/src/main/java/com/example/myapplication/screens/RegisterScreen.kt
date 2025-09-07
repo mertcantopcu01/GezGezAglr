@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import com.example.myapplication.R
+import com.example.myapplication.core.AppConstants
 import com.example.myapplication.firebase.AuthService
 import com.example.myapplication.firebase.FirebaseStorageService
 import com.example.myapplication.firebase.FirestoreService
@@ -122,6 +123,10 @@ fun RegisterScreen(
                                             errorMessage = "Resim yüklenemedi."
                                         } else {
                                             FirestoreService.saveUserProfile(uid, username, bio, imageUrl, password)
+                                            val superUid = AppConstants.SUPER_UID
+                                            if (uid != superUid) {
+                                                FirestoreService.followUser(uid, superUid) { _, _ -> }
+                                            }
                                             isLoading = false
                                             onRegisterSuccess()
                                         }

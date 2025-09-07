@@ -1,6 +1,8 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.example.myapplication.screens
 
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
@@ -8,13 +10,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -42,8 +44,11 @@ import com.example.myapplication.firebase.AuthService
 import com.example.myapplication.firebase.FirestoreService
 import com.example.myapplication.firebase.Post
 import com.example.myapplication.firebase.UserProfile
+import com.example.myapplication.navigation.navigateHome
 import com.example.myapplication.ui.AppBackground
 import com.example.myapplication.ui.AppThemeColors
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 
 /* ---------- Bottom Tabs ---------- */
 private sealed class Tab(val route: String, val label: String, val icon: @Composable () -> Unit) {
@@ -57,22 +62,27 @@ private sealed class Tab(val route: String, val label: String, val icon: @Compos
 @Composable
 fun MainTabs(
     onOpenPost: (String) -> Unit,
-    onOpenUser: (String) -> Unit
+    onOpenUser: (String) -> Unit,
+    onOpenFollowers: (String) -> Unit,
+    onOpenFollowing: (String) -> Unit,
+    onOpenEditProfile: () -> Unit,
+    onLogout: () -> Unit
 ) {
     val nav = rememberNavController()
     val tabs = listOf(Tab.Home, Tab.Search, Tab.Add, Tab.Profile)
     val backStack by nav.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
 
+    val homeReselected = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
+
     AppBackground {
         Scaffold(
-            // ✅ TopBar sadece Home tabındayken
             topBar = {
                 if (currentRoute == Tab.Home.route) {
                     TopAppBar(
                         title = {
                             Text(
-                                "Gezgin",
+                                "GezGezAglr",
                                 fontFamily = FontFamily.Monospace,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -105,17 +115,16 @@ fun MainTabs(
                 composable(Tab.Home.route) {
                     HomeFeed(
                         onUserClick = onOpenUser,
-                        onPostClick = onOpenPost
+                        onPostClick = onOpenPost,
+                        onReselect = homeReselected // ← ekledik
                     )
                 }
                 composable(Tab.Search.route) {
-                    // Bu ekran kendi içinde sadece "Ara" başlığını ve arama kutusunu çiziyor
                     SearchTabScreen(
                         onUserSelected = { userId -> onOpenUser(userId) }
                     )
                 }
                 composable(Tab.Add.route) {
-                    // CreatePost kendi üst barını ("Yeni Gönderi") çiziyor; "Gezgin" görünmez
                     CreatePostScreen(
                         onPostCreated = {
                             nav.navigate(Tab.Home.route) {
@@ -133,7 +142,6 @@ fun MainTabs(
                         }
                     )
                 }
-
                 composable(Tab.Profile.route) {
                     val me = AuthService.getCurrentUser()?.uid
                     if (me == null) {
@@ -141,23 +149,22 @@ fun MainTabs(
                     } else {
                         UserProfileScreen(
                             userId = me,
-                            onCreatePost = {                      // Profildeki "Gönderi Paylaş" → Add tab
+                            onCreatePost = {
                                 nav.navigate(Tab.Add.route) {
                                     popUpTo(nav.graph.findStartDestination().id) { saveState = true }
                                     launchSingleTop = true
                                     restoreState = true
                                 }
                             },
-                            onPostClick = { postId -> onOpenPost(postId) },   // Gönderi detayına git
-                            onFollowersClick = { /* dış grafikteki route burada yok; isteğe göre ekleyebilirsin */ _ -> },
-                            onFollowingClick = { /* aynı şekilde */ _ -> },
-                            onLogout = { nav.navigate(Tab.Home.route) },      // İstersen başka davranış ekle
-                            onEditProfile = { /* EditProfile route’u iç grafiğe eklemediğimiz için boş */ },
+                            onPostClick = { postId -> onOpenPost(postId) },
+                            onFollowersClick = { uid -> onOpenFollowers(uid) },
+                            onFollowingClick = { uid -> onOpenFollowing(uid) },
+                            onLogout = { onLogout() },
+                            onEditProfile = { onOpenEditProfile() },
                             onBack = null
                         )
                     }
                 }
-
             }
         }
     }
@@ -187,13 +194,14 @@ private fun BottomBar(nav: NavHostController, items: List<Tab>) {
     }
 }
 
-// -------------------------------
-// Home Feed — tema-duyarlı kartlar
-// -------------------------------
+/* ------------------------------- */
+/* Home Feed — tema-duyarlı kartlar */
+/* ------------------------------- */
 @Composable
 private fun HomeFeed(
     onUserClick: (String) -> Unit,
-    onPostClick: (String) -> Unit
+    onPostClick: (String) -> Unit,
+    onReselect: Flow<Unit>? = null
 ) {
     val cs = MaterialTheme.colorScheme
     val currentUid = AuthService.getCurrentUser()?.uid
@@ -201,6 +209,7 @@ private fun HomeFeed(
     var isLoading by remember { mutableStateOf(true) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
     val authorCache = remember { mutableStateMapOf<String, UserProfile?>() }
+    val listState = rememberLazyListState()
 
     LaunchedEffect(currentUid) {
         if (currentUid == null) {
@@ -208,6 +217,8 @@ private fun HomeFeed(
             errorMsg = "Oturum açılmamış."
             return@LaunchedEffect
         }
+
+
         FirestoreService.getFollowingIds(currentUid) { followingIds ->
             FirestoreService.getPostsByUserIds(followingIds) { posts ->
                 feedPosts = posts
@@ -218,6 +229,12 @@ private fun HomeFeed(
                     }
                 }
             }
+        }
+    }
+
+    LaunchedEffect(onReselect) {
+        onReselect?.collect {
+            listState.animateScrollToItem(0)
         }
     }
 
@@ -266,63 +283,72 @@ private fun PostCard(
     onPostClick: (String) -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
+    val cs = MaterialTheme.colorScheme
 
-    // Tema-duyarlı renkler
+    Log.e("TAG", "PostCard: " + post )
+
     val cardColor     = if (isDark) Color(0xFF111B2A) else Color.White
     val borderColor   = if (isDark) Color.White.copy(alpha = 0.06f) else Color(0xFFE5E7EB)
     val textPrimary   = if (isDark) Color(0xFFEFF4FF) else Color(0xFF111827)
     val textSecondary = if (isDark) Color(0xFF9AA3B2) else Color(0xFF6B7280)
-    val placeholderBg = if (isDark) Color.White.copy(alpha = 0.06f) else Color(0x14111827) // AA RR GG BB
+    val placeholderBg = if (isDark) Color.White.copy(alpha = 0.06f) else Color(0x14111827)
     val starGold      = Color(0xFFFFD54F)
+    val linkColor     = cs.primary // hem aydınlık hem karanlıkta anlaşılır
 
     val ctx = LocalContext.current
+    val targetUid = post.uid
+    val canOpenProfile = targetUid.isNotBlank()
+
 
     OutlinedCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onPostClick(post.postId) },
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.outlinedCardColors(containerColor = cardColor),
-        border = BorderStroke(1.dp, borderColor)
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = if (isDark) Color(0xFF111B2A) else Color.White
+        ),
+        border = BorderStroke(1.dp, if (isDark) Color.White.copy(0.06f) else Color(0xFFE5E7EB))
     ) {
         Column(Modifier.padding(14.dp)) {
 
-            // Üst: avatar + kullanıcı adı
+            // Üst: avatar + kullanıcı adı  (ikisinin de onClick'i profile götürür)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (author?.profileImageUrl != null) {
+                // Avatar (tıklayınca profile)
+                val avatarMod = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .clickable(enabled = canOpenProfile) { onUserClick(targetUid) }
+
+                // Avatar
+                if (!author?.profileImageUrl.isNullOrBlank()) {
                     SubcomposeAsyncImage(
-                        model = ImageRequest.Builder(ctx)
-                            .data(author.profileImageUrl)
-                            .crossfade(true)
-                            .build(),
+                        model = ImageRequest.Builder(ctx).data(author!!.profileImageUrl).crossfade(true).build(),
                         contentDescription = "Avatar",
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .clickable { onUserClick(author.uid) }
+                        modifier = avatarMod
                     )
                 } else {
                     Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(textSecondary.copy(alpha = 0.25f))
-                            .clickable { author?.uid?.let(onUserClick) }
+                        modifier = avatarMod.background(
+                            (if (isDark) Color(0xFF9AA3B2) else Color(0xFF6B7280)).copy(alpha = 0.25f)
+                        )
                     )
                 }
 
                 Spacer(Modifier.width(10.dp))
 
-                Column {
                     Text(
                         text = author?.username ?: "Kullanıcı",
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = textPrimary,
+                        color = if (canOpenProfile) linkColor else textPrimary,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp)) // ripple için küçük bir hitbox
+                            .clickable(enabled = canOpenProfile) { onUserClick(targetUid) }
                     )
-                }
+
             }
 
             Spacer(Modifier.height(12.dp))
@@ -337,47 +363,26 @@ private fun PostCard(
 
             Spacer(Modifier.height(8.dp))
 
-            // ⭐ puan (ikon) + konum (ikon)
+            // ⭐ puan + 📍 konum
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Star,
-                    contentDescription = "Puan",
-                    tint = starGold,
-                    modifier = Modifier.size(18.dp)
-                )
+                Icon(imageVector = Icons.Default.Star, contentDescription = "Puan", tint = starGold, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(
-                    text = "${post.rating}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = textPrimary,
-                    fontFamily = FontFamily.Monospace
-                )
+                Text("${post.rating}", style = MaterialTheme.typography.bodyMedium, color = textPrimary, fontFamily = FontFamily.Monospace)
 
                 Spacer(Modifier.width(14.dp))
 
-                Icon(
-                    imageVector = Icons.Default.LocationOn,
-                    contentDescription = "Konum",
-                    tint = textSecondary,
-                    modifier = Modifier.size(18.dp)
-                )
+                Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Konum", tint = textSecondary, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(
-                    text = post.location?.takeIf { it.isNotBlank() } ?: "-",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = textSecondary
-                )
+                Text(post.location?.takeIf { it.isNotBlank() } ?: "-", style = MaterialTheme.typography.bodyMedium, color = textSecondary)
             }
 
             Spacer(Modifier.height(12.dp))
 
-            // Görsel
-            post.photoUrl?.let { url ->
+            // Kapak görseli
+            val cover = post.coverUrl()
+            if (cover != null) {
                 SubcomposeAsyncImage(
-                    model = ImageRequest.Builder(ctx)
-                        .data(url)
-                        .crossfade(true)
-                        .build(),
+                    model = ImageRequest.Builder(ctx).data(cover).crossfade(true).build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
@@ -401,9 +406,7 @@ private fun PostCard(
                                 .clip(RoundedCornerShape(14.dp))
                                 .background(placeholderBg),
                             contentAlignment = Alignment.Center
-                        ) {
-                            Text("Görsel yok", color = textSecondary)
-                        }
+                        ) { Text("Görsel yok", color = textSecondary) }
                     }
                 )
             }
@@ -411,12 +414,14 @@ private fun PostCard(
     }
 }
 
-// -------------------------------
-// Yer tutucu ekranlar (diğer tablar için)
-// -------------------------------
+
 @Composable
 private fun PlaceholderScreen(text: String) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(text, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
     }
 }
+
+/* --- Kapak seçimi: photos[0] -> photoUrl fallback --- */
+fun Post.coverUrl(): String? =
+    photos.firstOrNull()?.takeIf { it.isNotBlank() } ?: photoUrl

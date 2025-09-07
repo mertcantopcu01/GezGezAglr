@@ -6,6 +6,7 @@ import com.google.firebase.storage.ktx.storage
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.UUID
 
 object FirebaseStorageService {
@@ -13,7 +14,10 @@ object FirebaseStorageService {
     private val storageRef = Firebase.storage.reference
     private val TAG = "FirebaseStorageService"
 
-
+    suspend fun uploadImageSuspend(ctx: Context, uri: Uri): String? =
+        suspendCancellableCoroutine { cont ->
+            uploadImage(ctx, uri) { url -> cont.resume(url, onCancellation = null) }
+        }
 
     fun uploadImage(
         context: Context,

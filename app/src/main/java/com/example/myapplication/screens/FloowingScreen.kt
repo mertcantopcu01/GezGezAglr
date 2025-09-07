@@ -27,6 +27,7 @@ import com.example.myapplication.ui.AppThemeColors   // 👈 eklendi
 @Composable
 fun FollowingScreen(
     userId: String,
+    isOwner: Boolean,
     onBack: () -> Unit,
     onUserClick: (String) -> Unit
 ) {
@@ -85,15 +86,18 @@ fun FollowingScreen(
                         profile = u,
                         onClick = { onUserClick(u.uid) },
                         isLoading = isLoading,
-                        onUnfollowClick = { pendingUnfollow = u }
+                        canUnfollow = isOwner,                 // <<< sadece sahibine buton göster
+                        onUnfollowClick = {
+                            if (isOwner) pendingUnfollow = u   // değilse hiçbir şey yapma
+                        }
                     )
                 }
             }
         }
 
-        // Onay Dialog
+        // Onay Dialog — sadece kendi sayfasında
         val target = pendingUnfollow
-        if (target != null) {
+        if (isOwner && target != null) {
             AlertDialog(
                 onDismissRequest = { if (!dialogSubmitting) pendingUnfollow = null },
                 title = { Text("Takibi bırak?", color = cs.onSurface) },
@@ -146,6 +150,7 @@ private fun FollowingRowCard(
     profile: UserProfile,
     onClick: () -> Unit,
     isLoading: Boolean,
+    canUnfollow: Boolean,                 // <<< EKLENDİ
     onUnfollowClick: () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
@@ -212,29 +217,32 @@ private fun FollowingRowCard(
                 }
             }
 
-            OutlinedButton(
-                onClick = onUnfollowClick,
-                enabled = !isLoading,
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                border = ButtonDefaults.outlinedButtonBorder,
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = if (isLoading) cs.onSurface.copy(alpha = 0.5f) else cs.primary
-                ),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .size(16.dp)
-                            .padding(end = 6.dp),
-                        strokeWidth = 2.dp,
-                        color = cs.primary
+            // --- Takibi bırak butonu sadece canUnfollow == true iken ---
+            if (canUnfollow) {
+                OutlinedButton(
+                    onClick = onUnfollowClick,
+                    enabled = !isLoading,
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                    border = ButtonDefaults.outlinedButtonBorder,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = if (isLoading) cs.onSurface.copy(alpha = 0.5f) else cs.primary
+                    ),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .padding(end = 6.dp),
+                            strokeWidth = 2.dp,
+                            color = cs.primary
+                        )
+                    }
+                    Text(
+                        text = if (isLoading) "Çıkılıyor..." else "Takibi bırak",
+                        style = MaterialTheme.typography.labelMedium
                     )
                 }
-                Text(
-                    text = if (isLoading) "Çıkılıyor..." else "Takibi bırak",
-                    style = MaterialTheme.typography.labelMedium
-                )
             }
         }
     }

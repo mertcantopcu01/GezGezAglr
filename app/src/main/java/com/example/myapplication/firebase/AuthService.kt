@@ -1,6 +1,7 @@
 package com.example.myapplication.firebase
 
 import com.example.myapplication.R
+import com.example.myapplication.core.AppConstants
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
@@ -44,7 +45,10 @@ object AuthService {
     }
 
 
-    fun getCurrentUser(): FirebaseUser? = auth.currentUser
+    fun getCurrentUserId(): String? = FirebaseAuth.getInstance().currentUser?.uid
+    fun getCurrentUser() = FirebaseAuth.getInstance().currentUser
+    fun isSuperUser(): Boolean =
+        getCurrentUserId() == AppConstants.SUPER_UID
 
     fun signOut() = auth.signOut()
 }
