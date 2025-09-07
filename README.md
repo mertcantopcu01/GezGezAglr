@@ -16,17 +16,16 @@
 ## Örnek Ekran Görselleri
 Uygulamanın bazı ekranlarına ait örnek görseller aşağıda yer almaktadır:
 
-| Ekran | Görsel |
-|------|--------|
 
-| Giriş ekranı (açık tema) | ![Giriş ekranı açık tema](./screenshots/Screenshot_20250907_113722.png) |
-| Giriş ekranı (koyu tema) | ![Giriş ekranı koyu tema](./screenshots/Screenshot_20250907_113736.png) |
-| Kayıt ol ekranı (koyu tema) – profil fotoğrafı ekleme, e-posta, kullanıcı adı, biyografi ve parola alanları | ![Kayıt ol ekranı koyu tema](./screenshots/Screenshot_20250907_113806.png) |
-| Kayıt ol ekranı (açık tema) – profil fotoğrafı ekleme, e-posta, kullanıcı adı, biyografi ve parola alanları | ![Kayıt ol ekranı açık tema](./screenshots/Screenshot_20250907_113819.png) |
-| Ana akış ekranı (koyu tema) – gönderi listesi | ![Ana akış ekranı koyu tema](./screenshots/Screenshot_20250907_113931.png) |
-| Ara ekranı (koyu tema) – kullanıcı arama listesi | ![Ara ekranı koyu tema](./screenshots/Screenshot_20250907_113943.png) |
-| Gönderi detayı ![Gönderi detayı ekranı](./screenshots/Screenshot_20250907_112906.png) |
-| Ara ekranı (açık tema) – kullanıcı arama listesi | ![Ara ekranı açık tema](./screenshots/Screenshot_20250907_113611.png) |
-| Profil ekranı (koyu tema) – gönderi ve takip bilgileri | ![Profil ekranı koyu tema](./screenshots/Screenshot_20250907_114006.png) |
-| Takip edilenler ekranı (koyu tema) – takip edilen kullanıcı listesi | ![Takip edilenler ekranı koyu tema](./screenshots/Screenshot_20250907_114033.png) |
+
+![Giriş ekranı açık tema](./screenshots/Screenshot_20250907_113722.png) |
+![Giriş ekranı koyu tema](./screenshots/Screenshot_20250907_113736.png) |
+![Kayıt ol ekranı koyu tema](./screenshots/Screenshot_20250907_113806.png) |
+![Kayıt ol ekranı açık tema](./screenshots/Screenshot_20250907_113819.png) |
+![Ana akış ekranı koyu tema](./screenshots/Screenshot_20250907_113931.png) |
+![Ara ekranı koyu tema](./screenshots/Screenshot_20250907_113943.png) |
+![Gönderi detayı ekranı](./screenshots/Screenshot_20250907_112906.png) |
+![Ara ekranı açık tema](./screenshots/Screenshot_20250907_113611.png) |
+![Profil ekranı koyu tema](./screenshots/Screenshot_20250907_114006.png) |
+![Takip edilenler ekranı koyu tema](./screenshots/Screenshot_20250907_114033.png) |
 
