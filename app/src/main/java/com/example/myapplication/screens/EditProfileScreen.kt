@@ -1,3 +1,4 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
 package com.example.myapplication.screens
 
 import android.net.Uri
@@ -5,35 +6,40 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import coil.compose.SubcomposeAsyncImage
-import coil.request.ImageRequest
+import androidx.compose.ui.unit.sp
+import coil.compose.rememberAsyncImagePainter
+import com.example.myapplication.R
 import com.example.myapplication.firebase.AuthService
 import com.example.myapplication.firebase.FirebaseStorageService
 import com.example.myapplication.firebase.FirestoreService
 import com.example.myapplication.firebase.UserProfile
-import com.example.myapplication.ui.TextFieldStyles
 import com.example.myapplication.ui.AppBackground
-import com.example.myapplication.ui.AppThemeColors   // 👈 EKLENDİ
+import com.example.myapplication.ui.TextFieldStyles
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
     onSaved: () -> Unit,
@@ -44,31 +50,40 @@ fun EditProfileScreen(
     val tfColors = TextFieldStyles.defaultTextFieldColors()
     val uid = AuthService.getCurrentUser()?.uid
 
+    // state
     var profile by remember { mutableStateOf<UserProfile?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var saving by remember { mutableStateOf(false) }
-    var errorMsg by remember { mutableStateOf<String?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    // form state
     var username by remember { mutableStateOf("") }
     var bio by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var removePhoto by remember { mutableStateOf(false) }
 
-    // Görsel seçiciler
+    // görsel seçiciler (RegisterScreen ile aynı mantık)
     val openDocumentLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-        onResult = { uri -> if (uri != null) { selectedImageUri = uri; removePhoto = false } }
-    )
-    val pickMediaLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia(),
-        onResult = { uri -> if (uri != null) { selectedImageUri = uri; removePhoto = false } }
-    )
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> if (uri != null) { selectedImageUri = uri; removePhoto = false } }
 
-    // profili yükle
+    val pickMediaLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri -> if (uri != null) { selectedImageUri = uri; removePhoto = false } }
+
+    fun triggerPickImage() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pickMediaLauncher.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            )
+        } else {
+            openDocumentLauncher.launch(arrayOf("image/*"))
+        }
+    }
+
+    // profil yükle
     LaunchedEffect(uid) {
         if (uid == null) {
-            errorMsg = "Oturum bulunamadı."
+            errorMessage = "Oturum bulunamadı."
             isLoading = false
         } else {
             FirestoreService.getUserProfile(uid) { p ->
@@ -80,250 +95,221 @@ fun EditProfileScreen(
         }
     }
 
-    fun saveWithImageUrl(imageUrl: String?) {
-        FirestoreService.saveUserProfile(uid!!, username, bio.ifBlank { "" }, imageUrl, null)
+    // basit validasyon (RegisterScreen diline yakın)
+    fun usernameError(t: String): String? {
+        if (t.isBlank()) return "Kullanıcı adı boş olamaz."
+        if (t.length < 3) return "En az 3 karakter olmalı."
+        if (!t.matches(Regex("^[a-zA-Z0-9._]+$"))) return "Sadece harf, rakam, . ve _ kullanın."
+        return null
+    }
+    val usernameErr = usernameError(username)
+    val canSave = !saving && uid != null && usernameErr == null
+
+    fun saveWithImageUrl(url: String?) {
+        FirestoreService.saveUserProfile(uid!!, username.trim(), bio.ifBlank { "" }, url, null)
         saving = false
         onSaved()
     }
 
+    fun onSave() {
+        if (!canSave) return
+        saving = true
+        errorMessage = null
+
+        when {
+            removePhoto -> saveWithImageUrl(null)
+            selectedImageUri != null -> {
+                FirebaseStorageService.uploadImage(context, selectedImageUri!!) { uploaded ->
+                    if (uploaded == null) {
+                        saving = false
+                        errorMessage = "Fotoğraf yüklenemedi."
+                    } else {
+                        saveWithImageUrl(uploaded)
+                    }
+                }
+            }
+            else -> saveWithImageUrl(profile?.profileImageUrl)
+        }
+    }
+
     AppBackground {
         Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            "Profili Düzenle",
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.SemiBold,
-                            color = AppThemeColors.extra.onTopBar   // 👈 onTopBar
+            containerColor = Color.Transparent,
+            bottomBar = {
+                // RegisterScreen ile aynı düzen: önce birincil buton, altında text button
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .navigationBarsPadding()
+                        .imePadding()
+                ) {
+                    Button(
+                        onClick = { onSave() },
+                        enabled = canSave,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = cs.primary,
+                            contentColor = cs.onPrimary,
+                            disabledContainerColor = cs.primary.copy(alpha = 0.4f),
+                            disabledContentColor = cs.onPrimary.copy(alpha = 0.7f)
                         )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onCancel) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Geri",
-                                tint = AppThemeColors.extra.onTopBar // 👈 onTopBar
+                    ) {
+                        if (saving) {
+                            CircularProgressIndicator(
+                                color = cs.onPrimary,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(20.dp)
                             )
+                        } else {
+                            Text("Kaydet", fontSize = 16.sp, fontFamily = FontFamily.SansSerif)
                         }
-                    },
-                    actions = {
-                        IconButton(
-                            onClick = {
-                                if (saving || uid == null) return@IconButton
-                                saving = true
-                                errorMsg = null
+                    }
 
-                                if (removePhoto) {
-                                    saveWithImageUrl(null)
-                                } else if (selectedImageUri != null) {
-                                    FirebaseStorageService.uploadImage(context, selectedImageUri!!) { url ->
-                                        if (url == null) {
-                                            saving = false
-                                            errorMsg = "Fotoğraf yüklenemedi."
-                                        } else {
-                                            saveWithImageUrl(url)
-                                        }
-                                    }
-                                } else {
-                                    saveWithImageUrl(profile?.profileImageUrl)
-                                }
-                            },
-                            enabled = !saving && uid != null && username.isNotBlank()
-                        ) {
-                            Icon(
-                                Icons.Filled.Check,
-                                contentDescription = "Kaydet",
-                                tint = AppThemeColors.extra.onTopBar // 👈 onTopBar
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = AppThemeColors.extra.topBar, // 👈 topBar
-                        titleContentColor = AppThemeColors.extra.onTopBar,
-                        navigationIconContentColor = AppThemeColors.extra.onTopBar,
-                        actionIconContentColor = AppThemeColors.extra.onTopBar
-                    )
-                )
-            },
-            containerColor = cs.background
+                    TextButton(
+                        onClick = onCancel,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("İptal", fontFamily = FontFamily.SansSerif)
+                    }
+                }
+            }
         ) { padding ->
-            Box(
+            if (isLoading) {
+                Box(Modifier.fillMaxSize().padding(padding)) {
+                    CircularProgressIndicator(Modifier.align(Alignment.Center), color = cs.primary)
+                }
+                return@Scaffold
+            }
+
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .verticalScroll(rememberScrollState())
+                    .imePadding(),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                when {
-                    isLoading -> CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                        color = cs.primary
-                    )
+                // Üst başlık (RegisterScreen ile aynı tipografi/dil)
+                Text(
+                    text = "Profili Düzenle",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = cs.onBackground,
+                    fontFamily = FontFamily.Monospace
+                )
 
-                    else -> {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            // Avatar önizleme
-                            val showingUrl = when {
-                                removePhoto -> null
-                                selectedImageUri != null -> selectedImageUri.toString()
-                                else -> profile?.profileImageUrl
-                            }
-
-                            SubcomposeAsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(showingUrl)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = "Profil Fotoğrafı",
-                                contentScale = ContentScale.Crop,
-                                loading = {
-                                    Box(
-                                        Modifier
-                                            .size(110.dp)
-                                            .clip(CircleShape)
-                                            .background(cs.secondary.copy(alpha = 0.2f))
-                                    )
-                                },
-                                error = {
-                                    Box(
-                                        Modifier
-                                            .size(110.dp)
-                                            .clip(CircleShape)
-                                            .background(cs.secondary.copy(alpha = 0.2f))
-                                    )
-                                },
-                                modifier = Modifier
-                                    .size(110.dp)
-                                    .clip(CircleShape)
-                            )
-
-                            Spacer(Modifier.height(10.dp))
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                OutlinedButton(
-                                    onClick = {
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                            pickMediaLauncher.launch(
-                                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                            )
-                                        } else {
-                                            openDocumentLauncher.launch(arrayOf("image/*"))
-                                        }
-                                    },
-                                    shape = MaterialTheme.shapes.medium
-                                ) { Text("Fotoğraf Değiştir", fontFamily = FontFamily.Monospace) }
-
-                                OutlinedButton(
-                                    onClick = {
-                                        selectedImageUri = null
-                                        removePhoto = true
-                                    },
-                                    shape = MaterialTheme.shapes.medium,
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.error)
-                                ) {
-                                    Icon(Icons.Filled.Delete, contentDescription = null, tint = cs.error)
-                                    Spacer(Modifier.width(6.dp))
-                                    Text("Kaldır", fontFamily = FontFamily.Monospace, color = cs.error)
-                                }
-                            }
-
-                            Spacer(Modifier.height(18.dp))
-
-                            OutlinedTextField(
-                                value = username,
-                                onValueChange = { username = it },
-                                label = { Text("Kullanıcı adı", color = cs.onSurface.copy(alpha = 0.7f)) },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = tfColors
-                            )
-
-                            Spacer(Modifier.height(12.dp))
-
-                            OutlinedTextField(
-                                value = bio,
-                                onValueChange = { bio = it },
-                                label = { Text("Bio (isteğe bağlı)", color = cs.onSurface.copy(alpha = 0.7f)) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(100.dp),
-                                colors = tfColors
-                            )
-
-                            if (!errorMsg.isNullOrBlank()) {
-                                Spacer(Modifier.height(10.dp))
-                                Surface(
-                                    color = cs.errorContainer,
-                                    contentColor = cs.onErrorContainer,
-                                    shape = MaterialTheme.shapes.medium
-                                ) {
-                                    Text(
-                                        text = errorMsg!!,
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                        fontFamily = FontFamily.Monospace
-                                    )
-                                }
-                            }
-
-                            Spacer(Modifier.height(18.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                OutlinedButton(
-                                    onClick = onCancel,
-                                    modifier = Modifier.weight(1f),
-                                    shape = MaterialTheme.shapes.medium
-                                ) { Text("İptal", fontFamily = FontFamily.Monospace) }
-
-                                Button(
-                                    onClick = {
-                                        if (saving || uid == null) return@Button
-                                        saving = true
-                                        errorMsg = null
-                                        if (removePhoto) {
-                                            saveWithImageUrl(null)
-                                        } else if (selectedImageUri != null) {
-                                            FirebaseStorageService.uploadImage(context, selectedImageUri!!) { url ->
-                                                if (url == null) {
-                                                    saving = false
-                                                    errorMsg = "Fotoğraf yüklenemedi."
-                                                } else {
-                                                    saveWithImageUrl(url)
-                                                }
-                                            }
-                                        } else {
-                                            saveWithImageUrl(profile?.profileImageUrl)
-                                        }
-                                    },
-                                    enabled = !saving && username.isNotBlank(),
-                                    modifier = Modifier.weight(1f),
-                                    shape = MaterialTheme.shapes.medium,
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = cs.primary,
-                                        contentColor = cs.onPrimary,
-                                        disabledContainerColor = cs.primary.copy(alpha = 0.4f),
-                                        disabledContentColor = cs.onPrimary.copy(alpha = 0.7f)
-                                    )
-                                ) {
-                                    if (saving) {
-                                        CircularProgressIndicator(
-                                            strokeWidth = 2.dp,
-                                            modifier = Modifier.size(20.dp),
-                                            color = cs.onPrimary
-                                        )
-                                    } else {
-                                        Text("Kaydet", fontFamily = FontFamily.Monospace)
-                                    }
-                                }
-                            }
-                        }
+                // Avatar alanı (RegisterScreen ile aynı kurgu)
+                Box(
+                    modifier = Modifier
+                        .size(108.dp)
+                        .clip(CircleShape)
+                        .border(2.dp, cs.primary.copy(alpha = 0.8f), CircleShape)
+                        .clickable { triggerPickImage() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    val display = when {
+                        selectedImageUri != null -> selectedImageUri
+                        removePhoto -> null
+                        else -> profile?.profileImageUrl?.let { Uri.parse(it) }
+                    }
+                    if (display != null) {
+                        Image(
+                            painter = rememberAsyncImagePainter(display),
+                            contentDescription = "Profil Fotoğrafı",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(R.drawable.unknown_avatar),
+                            contentDescription = "Varsayılan",
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(CircleShape)
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(26.dp)
+                            .clip(CircleShape)
+                            .background(cs.primary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Filled.Add, contentDescription = "Ekle", tint = cs.onPrimary)
                     }
                 }
+                Text(
+                    "Profil fotoğrafını güncelle",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cs.onBackground,
+                    fontFamily = FontFamily.SansSerif
+                )
+                TextButton(
+                    onClick = {
+                        selectedImageUri = null
+                        removePhoto = true
+                    }
+                ) {
+                    Text("Fotoğrafı kaldır", color = cs.error, fontFamily = FontFamily.SansSerif)
+                }
+
+                // Kullanıcı adı
+                Column(Modifier.fillMaxWidth()) {
+                    Text("Kullanıcı Adı", color = cs.onSurface.copy(0.8f), style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = username,
+                        onValueChange = { username = it; errorMessage = null },
+                        placeholder = { Text("Kullanıcı adınızı güncelleyin") },
+                        singleLine = true,
+                        isError = usernameErr != null,
+                        supportingText = {
+                            val msg = usernameErr ?: "Sadece harf, rakam, . ve _ kullanın (min 3)."
+                            Text(
+                                msg,
+                                color = if (usernameErr != null) cs.error else cs.onSurface.copy(alpha = 0.6f)
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = tfColors
+                    )
+                }
+
+                // Biyografi
+                Column(Modifier.fillMaxWidth()) {
+                    Text("Biyografi", color = cs.onSurface.copy(0.8f), style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = bio,
+                        onValueChange = { bio = it; errorMessage = null },
+                        placeholder = { Text("Kendinizden bahsedin") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 80.dp, max = 120.dp),
+                        colors = tfColors
+                    )
+                }
+
+                // Hata kutusu
+                errorMessage?.let {
+                    Surface(
+                        color = cs.errorContainer,
+                        contentColor = cs.onErrorContainer,
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Text(it, modifier = Modifier.padding(12.dp), fontFamily = FontFamily.SansSerif)
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp)) // içerik ile bottomBar arasında nefes
             }
         }
     }

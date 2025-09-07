@@ -81,8 +81,7 @@ fun SearchTabScreen(
             value = query,
             onValueChange = { query = it },
             modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
+                .fillMaxWidth(),
             placeholder = { Text("Kullanıcı ara...") },
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
             trailingIcon = {

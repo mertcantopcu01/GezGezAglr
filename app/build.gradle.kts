@@ -1,3 +1,5 @@
+
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -27,6 +29,7 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -39,8 +42,28 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.11"
     }
+
     kotlinOptions {
         jvmTarget = "11"
+    }
+}
+
+// ✅ Yeni AGP API ile APK adı değiştirme
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        variant.outputs.forEach { output ->
+            val appName = "GezGezAglr"
+            val buildType = variant.buildType
+            val verName = variant.name ?: "1.0"
+
+            // örnek: MyApplication-debug.apk veya MyApplication-v1.0-release.apk
+            val fileName = if (buildType == "release") {
+                "${appName}-v${verName}-${buildType}.apk"
+            } else {
+                "${appName}-${buildType}.apk"
+            }
+
+        }
     }
 }
 
@@ -50,7 +73,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("io.coil-kt:coil-compose:2.7.0")
 
-    // Compose BOM (tüm compose versiyonlarını buradan yönet)
+    // Compose BOM
     implementation(platform("androidx.compose:compose-bom:2024.09.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
@@ -61,14 +84,23 @@ dependencies {
 
     // Compose Activity & Navigation
     implementation("androidx.activity:activity-compose:1.8.2")
-    implementation(libs.compose.navigation) // versiyon kataloğundan kullanmaya devam et
+    implementation(libs.compose.navigation)
 
     // AndroidX & Material (XML tarafı)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
-    implementation(libs.androidx.activity) // varsa kalsın
+    implementation(libs.androidx.activity)
+
+    implementation("com.google.android.libraries.places:places:4.0.0")
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+    implementation("org.osmdroid:osmdroid-android:6.1.20")
+    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
+
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
 
     // Accompanist (opsiyonel)
     implementation("com.google.accompanist:accompanist-swiperefresh:0.30.1")

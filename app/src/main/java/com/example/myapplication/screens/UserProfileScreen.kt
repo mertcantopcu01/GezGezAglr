@@ -9,9 +9,10 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
@@ -40,20 +42,20 @@ fun UserProfileScreen(
     onPostClick: (String) -> Unit,
     onFollowersClick: (String) -> Unit,
     onFollowingClick: (String) -> Unit,
-    onLogout: () -> Unit,           // imza korunuyor
+    onLogout: () -> Unit,
     onEditProfile: () -> Unit,
     onBack: (() -> Unit)? = null
 ) {
     val cs = MaterialTheme.colorScheme
-    val ctx = LocalContext.current
     val currentUserId = AuthService.getCurrentUser()?.uid
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     var profile by remember { mutableStateOf<UserProfile?>(null) }
     var posts by remember { mutableStateOf<List<Post>>(emptyList()) }
     var isFollowing by remember { mutableStateOf(false) }
     var followersCount by remember { mutableStateOf(0) }
     var followingCount by remember { mutableStateOf(0) }
-    var tabIndex by remember { mutableStateOf(0) } // 0: Gönderiler, 1: Kaydedilenler
+    var tabIndex by remember { mutableStateOf(0) }
 
     LaunchedEffect(userId) {
         FirestoreService.getUserProfile(userId) { profile = it }
@@ -91,10 +93,10 @@ fun UserProfileScreen(
                     },
                     actions = {
                         if (currentUserId == userId) {
-                            IconButton(onClick = onEditProfile) {
+                            IconButton(onClick = { showLogoutDialog = true }) {
                                 Icon(
-                                    imageVector = Icons.Filled.Edit,
-                                    contentDescription = "Profili Düzenle",
+                                    imageVector = Icons.AutoMirrored.Filled.Logout,
+                                    contentDescription = "Çıkış Yap",
                                     tint = AppThemeColors.extra.onTopBar
                                 )
                             }
@@ -110,7 +112,6 @@ fun UserProfileScreen(
             },
             containerColor = cs.background
         ) { padding ->
-
             if (profile == null) {
                 Box(Modifier.fillMaxSize().padding(padding)) {
                     CircularProgressIndicator(Modifier.align(Alignment.Center), color = cs.primary)
@@ -154,8 +155,8 @@ fun UserProfileScreen(
                                 }
                             }
                         },
-                        onFollowersClick = { onFollowersClick(userId) },
-                        onFollowingClick = { onFollowingClick(userId) },
+                        onFollowersTap = { onFollowersClick(userId) },
+                        onFollowingTap = { onFollowingClick(userId) },
                         onEditProfile = onEditProfile,
                         onCreatePost = onCreatePost
                     )
@@ -185,9 +186,10 @@ fun UserProfileScreen(
                 }
 
                 if (tabIndex == 0) {
+                    // kapak = photos[0] varsa onu, yoksa photoUrl
                     items(posts, key = { it.postId }) { post ->
                         PostGridItem(
-                            url = post.photoUrl,
+                            url = post.coverUrl(),
                             onClick = { onPostClick(post.postId) }
                         )
                     }
@@ -208,6 +210,17 @@ fun UserProfileScreen(
                 }
             }
         }
+
+    }
+
+    if (showLogoutDialog) {
+        ConfirmLogoutDialog(
+            onDismiss = { showLogoutDialog = false },
+            onConfirm = {
+                showLogoutDialog = false
+                onLogout()
+            }
+        )
     }
 }
 
@@ -220,8 +233,8 @@ private fun ProfileHeaderBlock(
     isOwn: Boolean,
     isFollowing: Boolean,
     onToggleFollow: () -> Unit,
-    onFollowersClick: () -> Unit,
-    onFollowingClick: () -> Unit,
+    onFollowersTap: () -> Unit,
+    onFollowingTap: () -> Unit,
     onEditProfile: () -> Unit,
     onCreatePost: () -> Unit
 ) {
@@ -282,8 +295,8 @@ private fun ProfileHeaderBlock(
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             StatButton(value = postsCount.compact(), label = "Gönderi", onClick = null)
-            StatButton(value = followersCount.compact(), label = "Takipçi", onClick = onFollowersClick)
-            StatButton(value = followingCount.compact(), label = "Takip", onClick = onFollowingClick)
+            StatButton(value = followersCount.compact(), label = "Takipçi", onClick = onFollowersTap)
+            StatButton(value = followingCount.compact(), label = "Takip", onClick = onFollowingTap)
         }
 
         Spacer(Modifier.height(14.dp))
@@ -295,19 +308,10 @@ private fun ProfileHeaderBlock(
                     .fillMaxWidth()
                     .height(44.dp),
                 shape = MaterialTheme.shapes.medium
-            ) {
-                Text("Profili Düzenle")
-            }
+            ) { Text("Profili Düzenle") }
+
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = onCreatePost,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Text("Gönderi Paylaş")
-            }
+
         } else {
             Button(
                 onClick = onToggleFollow,
@@ -380,11 +384,84 @@ private fun PostGridItem(url: String?, onClick: () -> Unit) {
     }
 }
 
-private fun Int.compact(): String {
-    val n = this
-    return when {
-        n >= 1_000_000 -> String.format("%.1fM", n / 1_000_000f).trimEnd('0').trimEnd('.')
-        n >= 1_000     -> String.format("%.1fK", n / 1_000f).trimEnd('0').trimEnd('.')
-        else           -> n.toString()
+@Composable
+private fun ConfirmLogoutDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val cs = MaterialTheme.colorScheme
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            color = cs.surface,
+            shape = RoundedCornerShape(20.dp),
+            tonalElevation = 8.dp,
+            shadowElevation = 16.dp,
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .wrapContentHeight()
+        ) {
+            Column(
+                modifier = Modifier.padding(vertical = 24.dp, horizontal = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    "Çıkış yapmak istediğinizden emin misiniz?",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                    color = cs.onSurface,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "Tekrar giriş yapmanız gerekecektir.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cs.onSurface.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    horizontalArrangement = Arrangement.spacedBy(1.dp)
+                ) {
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(bottomStart = 20.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor =
+                                if (isDark) cs.surfaceVariant.copy(alpha = 0.35f)
+                                else cs.surfaceVariant,
+                            contentColor = cs.onSurface
+                        ),
+                        elevation = null
+                    ) { Text("Hayır", fontWeight = FontWeight.Medium) }
+
+                    Button(
+                        onClick = onConfirm,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(bottomEnd = 20.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = cs.primary,
+                            contentColor = cs.onPrimary
+                        ),
+                        elevation = null
+                    ) { Text("Evet", fontWeight = FontWeight.SemiBold) }
+                }
+            }
+        }
     }
 }
+
+/* ------- küçük yardımcılar ------- */
+
+private fun Int.compact(): String =
+    when {
+        this >= 1_000_000 -> String.format("%.1fM", this / 1_000_000f).trimEnd('0').trimEnd('.')
+        this >= 1_000     -> String.format("%.1fK", this / 1_000f).trimEnd('0').trimEnd('.')
+        else              -> this.toString()
+    }
+

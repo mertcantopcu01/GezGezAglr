@@ -1,6 +1,8 @@
 package com.example.myapplication.navigation
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -22,22 +24,44 @@ object Routes {
 }
 
 @Composable
-fun AppNavGraph(navController: NavHostController, startDestination: String) {
-    NavHost(navController = navController, startDestination = startDestination) {
+fun AppNavGraph(
+    navController: NavHostController,
+    startDestination: String
+) {
+    NavHost(
+        navController = navController,
+        startDestination = startDestination
+    ) {
 
-        // HOME (bottom tab'ler içeride)
+        // ---------------- HOME (Tab’ler bu ekran içinde) ----------------
         composable(Routes.HOME) {
             MainTabs(
                 onOpenPost = { postId ->
-                    navController.navigate("${Routes.POST_DETAIL}/$postId")
+                    navController.navigate("${Routes.POST_DETAIL}/${Uri.encode(postId)}")
                 },
                 onOpenUser = { userId ->
-                    navController.navigate("${Routes.USER_PROFILE}/$userId")
+                    navController.navigate("${Routes.USER_PROFILE}/${Uri.encode(userId)}")
+                },
+                onOpenFollowers = { uid ->
+                    navController.navigate("${Routes.FOLLOWERS_LIST}/${Uri.encode(uid)}")
+                },
+                onOpenFollowing = { uid ->
+                    navController.navigate("${Routes.FOLLOWING_LIST}/${Uri.encode(uid)}")
+                },
+                onOpenEditProfile = {
+                    navController.navigate(Routes.EDIT_PROFILE)     // ← YENİ
+                },
+                onLogout = {
+                    AuthService.signOut()
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                        launchSingleTop = true
+                    }
                 }
             )
         }
 
-        // LOGIN
+        // ---------------- LOGIN ----------------
         composable(Routes.LOGIN) {
             LoginScreen(
                 onLoginSuccess = {
@@ -49,7 +73,7 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
             )
         }
 
-        // REGISTER
+        // ---------------- REGISTER ----------------
         composable(Routes.REGISTER) {
             RegisterScreen(
                 onRegisterSuccess = { navController.popBackStack() },
@@ -57,38 +81,52 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
             )
         }
 
-        // CREATE POST
+        // ---------------- CREATE POST ----------------
         composable(Routes.CREATE_POST) {
+            val me = AuthService.getCurrentUser()
             CreatePostScreen(
-                onPostCreated = { navController.popBackStack() },
+                onPostCreated = {
+                    navController.navigate("${Routes.USER_PROFILE}/$me") {
+                        popUpTo(navController.graph.startDestinationId) { saveState = false }
+                        launchSingleTop = true
+                    }
+                },
                 onBack = { navController.popBackStack() }
             )
         }
 
-        // USER PROFILE
+
+        // ---------------- USER PROFILE ----------------
         composable(
             route = "${Routes.USER_PROFILE}/{userId}",
             arguments = listOf(navArgument("userId") { type = NavType.StringType })
         ) { backStack ->
             val userId = backStack.arguments!!.getString("userId")!!
             UserProfileScreen(
-                userId           = userId,
-                onPostClick      = { postId -> navController.navigate("${Routes.POST_DETAIL}/$postId") },
-                onFollowersClick = { uid -> navController.navigate("${Routes.FOLLOWERS_LIST}/$uid") },
-                onFollowingClick = { uid -> navController.navigate("${Routes.FOLLOWING_LIST}/$uid") },
-                onCreatePost     = { navController.navigate(Routes.CREATE_POST) },
-                onLogout         = {
+                userId = userId,
+                onPostClick = { postId ->
+                    navController.navigate("${Routes.POST_DETAIL}/${Uri.encode(postId)}")
+                },
+                onFollowersClick = { uid ->
+                    navController.navigate("${Routes.FOLLOWERS_LIST}/${Uri.encode(uid)}")
+                },
+                onFollowingClick = { uid ->
+                    navController.navigate("${Routes.FOLLOWING_LIST}/${Uri.encode(uid)}")
+                },
+                onCreatePost = { navController.navigate(Routes.CREATE_POST) },
+                onLogout = {
                     AuthService.signOut()
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                        launchSingleTop = true
                     }
                 },
-                onEditProfile    = { navController.navigate(Routes.EDIT_PROFILE) },
-                onBack           = { navController.popBackStack() }
+                onEditProfile = { navController.navigate(Routes.EDIT_PROFILE) },
+                onBack = { navController.popBackStack() }
             )
         }
 
-        // EDIT PROFILE
+        // ---------------- EDIT PROFILE ----------------
         composable(Routes.EDIT_PROFILE) {
             EditProfileScreen(
                 onSaved = { navController.popBackStack() },
@@ -96,7 +134,7 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
             )
         }
 
-        // POST DETAIL
+        // ---------------- POST DETAIL ----------------
         composable(
             route = "${Routes.POST_DETAIL}/{postId}",
             arguments = listOf(navArgument("postId") { type = NavType.StringType })
@@ -108,34 +146,48 @@ fun AppNavGraph(navController: NavHostController, startDestination: String) {
             )
         }
 
-        // FOLLOWERS
+        // ---------------- FOLLOWERS LIST ----------------
         composable(
             route = "${Routes.FOLLOWERS_LIST}/{userId}",
             arguments = listOf(navArgument("userId") { type = NavType.StringType })
         ) { back ->
-            val userId = back.arguments!!.getString("userId")!!
+            val uid = back.arguments!!.getString("userId")!!
             FollowersScreen(
-                userId = userId,
+                userId = uid,
                 onBack = { navController.popBackStack() },
                 onUserClick = { clickedUid ->
-                    navController.navigate("${Routes.USER_PROFILE}/$clickedUid")
+                    navController.navigate("${Routes.USER_PROFILE}/${Uri.encode(clickedUid)}")
                 }
             )
         }
 
-        // FOLLOWING
+        // ---------------- FOLLOWING LIST ----------------
         composable(
             route = "${Routes.FOLLOWING_LIST}/{userId}",
-            arguments = listOf(navArgument("userId"){ type = NavType.StringType })
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
         ) { back ->
-            val userId = back.arguments!!.getString("userId")!!
+            val uid = back.arguments!!.getString("userId")!!                  // profil sahibi
+            val me  = AuthService.getCurrentUser()
+                ?: AuthService.getCurrentUser()?.uid.orEmpty()                // senin UID'in
+
             FollowingScreen(
-                userId = userId,
-                onBack = { navController.popBackStack() },
+                userId   = uid,
+                isOwner  = (uid == me),                                       // sadece kendi sayfamda buton var
+                onBack   = { navController.popBackStack() },
                 onUserClick = { clickedUid ->
-                    navController.navigate("${Routes.USER_PROFILE}/$clickedUid")
+                    navController.navigate("${Routes.USER_PROFILE}/${Uri.encode(clickedUid)}")
                 }
             )
         }
+    }
+}
+
+fun NavHostController.navigateHome() {
+    navigate(Routes.HOME) {
+        popUpTo(graph.findStartDestination().id) {
+            saveState = true
+        }
+        launchSingleTop = true
+        restoreState = true
     }
 }
